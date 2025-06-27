@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .image-error\:flex {
+    .image-error & {
+      display: flex;
+    }
+  }
+  
+  .image-error\:hidden {
+    .image-error & {
+      display: none;
+    }
+  }
+}

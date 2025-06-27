@@ -1,0 +1,209 @@
+{
+  "reportData": {
+    "cliente": "ACQUASALLES LTDA",
+    "cnpj_cpf": "16.716.417/0001-95",
+    "endereco": "Rua Industrial, 123",
+    "bairro": "Distrito Industrial",
+    "cidade": "São Paulo",
+    "datas": [
+      {
+        "data": "19/03/2025",
+        "area": [
+          {
+            "nome": "Área Industrial Principal",
+            "pontos_de_coleta": [
+              {
+                "nome": "Ponto A1",
+                "medicoes": [
+                  {
+                    "tipo": "pH",
+                    "valor": 7.2
+                  },
+                  {
+                    "tipo": "Cloro",
+                    "valor": 1.5
+                  },
+                  {
+                    "tipo": "Turbidez",
+                    "valor": 2.8
+                  }
+                ]
+              },
+              {
+                "nome": "Ponto A2",
+                "medicoes": [
+                  {
+                    "tipo": "Hidrômetro",
+                    "valor": 34567
+                  },
+                  {
+                    "tipo": "Vazão",
+                    "valor": 450
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "data": "20/03/2025",
+        "area": [
+          {
+            "nome": "Área Industrial Principal",
+            "pontos_de_coleta": [
+              {
+                "nome": "Ponto A1",
+                "medicoes": [
+                  {
+                    "tipo": "pH",
+                    "valor": 7.1
+                  },
+                  {
+                    "tipo": "Cloro",
+                    "valor": 1.3
+                  },
+                  {
+                    "tipo": "Turbidez",
+                    "valor": 3.1
+                  }
+                ]
+              },
+              {
+                "nome": "Ponto A2",
+                "medicoes": [
+                  {
+                    "tipo": "Hidrômetro",
+                    "valor": 35012
+                  },
+                  {
+                    "tipo": "Vazão",
+                    "valor": 445
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "data": "21/03/2025",
+        "area": [
+          {
+            "nome": "Área Industrial Principal",
+            "pontos_de_coleta": [
+              {
+                "nome": "Ponto A1",
+                "medicoes": [
+                  {
+                    "tipo": "pH",
+                    "valor": 6.9
+                  },
+                  {
+                    "tipo": "Cloro",
+                    "valor": 1.7
+                  },
+                  {
+                    "tipo": "Turbidez",
+                    "valor": 2.5
+                  }
+                ]
+              },
+              {
+                "nome": "Ponto A2",
+                "medicoes": [
+                  {
+                    "tipo": "Hidrômetro",
+                    "valor": 35489
+                  },
+                  {
+                    "tipo": "Vazão",
+                    "valor": 477
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "collectionPointsData": [
+    {
+      "id": "point-a1",
+      "name": "Ponto A1",
+      "datasetStats": [
+        {
+          "label": "pH",
+          "min": 6.8,
+          "max": 7.4,
+          "avg": 7.1,
+          "color": "rgb(59, 130, 246)",
+          "hidden": false
+        },
+        {
+          "label": "Cloro",
+          "min": 1.2,
+          "max": 1.8,
+          "avg": 1.5,
+          "color": "rgb(16, 185, 129)",
+          "hidden": false
+        },
+        {
+          "label": "Turbidez",
+          "min": 2.1,
+          "max": 3.5,
+          "avg": 2.8,
+          "color": "rgb(239, 68, 68)",
+          "hidden": false
+        }
+      ],
+      "chartImageUrl": "https://example.com/charts/point-a1-chart.png"
+    },
+    {
+      "id": "point-a2",
+      "name": "Ponto A2",
+      "datasetStats": [
+        {
+          "label": "Hidrômetro",
+          "min": 34000,
+          "max": 36000,
+          "avg": 35000,
+          "color": "rgb(236, 72, 153)",
+          "hidden": false
+        },
+        {
+          "label": "Volume",
+          "min": 400,
+          "max": 500,
+          "avg": 457,
+          "total": 13710,
+          "color": "rgb(245, 158, 11)",
+          "hidden": false
+        }
+      ],
+      "chartImageUrl": "https://example.com/charts/point-a2-chart.png"
+    }
+  ],
+  "clientInfo": {
+    "name": "ACQUASALLES LTDA",
+    "cnpj": "16.716.417/0001-95",
+    "address": "Rua Industrial, 123, Distrito Industrial",
+    "city": "São Paulo",
+    "state": "SP",
+    "phone": "+55 (11) 1234-5678",
+    "email": "contato@acquasalles.com.br",
+    "contact": "João Silva - Gerente de Qualidade"
+  },
+  "reportPeriod": {
+    "start": "2025-03-19T00:00:00.000Z",
+    "end": "2025-03-21T23:59:59.999Z"
+  },
+  "options": {
+    "format": "a4-landscape",
+    "includeCharts": true,
+    "includeTable": true,
+    "maxTableRows": 30,
+    "language": "pt-BR"
+  }
+}

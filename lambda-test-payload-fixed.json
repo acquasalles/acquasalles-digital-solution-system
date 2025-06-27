@@ -1,0 +1,104 @@
+{
+  "reportData": {
+    "cliente": "ACQUASALLES LTDA",
+    "cnpj_cpf": "16.716.417/0001-95",
+    "endereco": "Rua Industrial, 123",
+    "bairro": "Distrito Industrial",
+    "cidade": "São Paulo",
+    "datas": [
+      {
+        "data": "19/03/2025",
+        "area": [
+          {
+            "nome": "Área Industrial Principal",
+            "pontos_de_coleta": [
+              {
+                "nome": "Ponto A1",
+                "medicoes": [
+                  {
+                    "tipo": "pH",
+                    "valor": 7.2
+                  },
+                  {
+                    "tipo": "Cloro",
+                    "valor": 1.5
+                  },
+                  {
+                    "tipo": "Turbidez",
+                    "valor": 2.8
+                  }
+                ]
+              },
+              {
+                "nome": "Ponto A2",
+                "medicoes": [
+                  {
+                    "tipo": "Hidrômetro",
+                    "valor": 34567
+                  },
+                  {
+                    "tipo": "Vazão",
+                    "valor": 450
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "collectionPointsData": [
+    {
+      "id": "point-a1",
+      "name": "Ponto A1",
+      "datasetStats": [
+        {
+          "label": "pH",
+          "min": 6.8,
+          "max": 7.4,
+          "avg": 7.1,
+          "color": "rgb(59, 130, 246)",
+          "hidden": false
+        },
+        {
+          "label": "Cloro",
+          "min": 1.2,
+          "max": 1.8,
+          "avg": 1.5,
+          "color": "rgb(16, 185, 129)",
+          "hidden": false
+        }
+      ]
+    },
+    {
+      "id": "point-a2",
+      "name": "Ponto A2",
+      "datasetStats": [
+        {
+          "label": "Volume",
+          "min": 400,
+          "max": 500,
+          "avg": 457,
+          "total": 13710,
+          "color": "rgb(245, 158, 11)",
+          "hidden": false
+        }
+      ]
+    }
+  ],
+  "clientInfo": {
+    "name": "ACQUASALLES LTDA",
+    "cnpj": "16.716.417/0001-95",
+    "address": "Rua Industrial, 123",
+    "city": "São Paulo",
+    "state": "SP",
+    "phone": "+55 (11) 1234-5678",
+    "email": "contato@acquasalles.com.br",
+    "contact": "João Silva"
+  },
+  "reportPeriod": {
+    "start": "2025-03-19T00:00:00.000Z",
+    "end": "2025-03-21T23:59:59.999Z"
+  }
+}

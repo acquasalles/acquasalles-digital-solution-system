@@ -429,7 +429,7 @@ export function A4ReportPreview({
               </div>
 
               {/* Key Metrics - HIDDEN AS REQUESTED */}
-              {/* 
+              {
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-green-50 p-3 rounded-lg border border-green-200">
                   <h4 className="font-semibold text-green-900 mb-2 text-sm">Parâmetros Monitorados</h4>
@@ -454,7 +454,7 @@ export function A4ReportPreview({
                   </ul>
                 </div>
               </div>
-              */}
+              }
 
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">

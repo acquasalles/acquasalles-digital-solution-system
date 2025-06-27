@@ -1,5 +1,13 @@
-// Enhanced Lambda handler with proper error handling and debugging
-exports.handler = async (event, context) => {
+// Enhanced Lambda handler with proper error handling and debugging - ES6 Module
+import { generateA4PDF } from './generateA4PDF.js';
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
+import handlebars from "handlebars";
+import AWS from "aws-sdk";
+import fs from "fs";
+import path from "path";
+
+export const handler = async (event, context) => {
   console.log('Lambda invocation started');
   console.log('Event:', JSON.stringify(event, null, 2));
   console.log('Context:', JSON.stringify(context, null, 2));
@@ -110,9 +118,6 @@ exports.handler = async (event, context) => {
     };
     
     console.log('Validation passed, generating PDF...');
-    
-    // Import your PDF generation function
-    const { generateA4PDF } = require('./generateA4PDF'); // Adjust path as needed
     
     // Create a mock intl object for testing
     const mockIntl = {

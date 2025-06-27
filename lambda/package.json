@@ -1,0 +1,24 @@
+{
+  "name": "lambda-pdf-generator",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lambda function for generating PDF reports",
+  "main": "lambda-debug-handler.mjs",
+  "scripts": {
+    "build": "webpack --mode production",
+    "dev": "webpack --mode development",
+    "test": "node test-lambda-locally.mjs"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^119.0.2",
+    "puppeteer-core": "^21.6.1",
+    "handlebars": "^4.7.8",
+    "aws-sdk": "^2.1691.0",
+    "jspdf": "^2.5.1",
+    "jspdf-autotable": "^3.8.2"
+  },
+  "devDependencies": {
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  }
+}

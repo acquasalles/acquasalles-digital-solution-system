@@ -482,8 +482,6 @@ export function A4ReportPreview({
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
-                  </div>
-                  <div className="text-sm text-red-700">Não Conformidades</div>
                 </div>
               </div>
             </div>

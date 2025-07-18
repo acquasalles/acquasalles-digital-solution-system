@@ -407,7 +407,7 @@ export function A4ReportPreview({
               {/* Client Information Section - Optimized for Landscape */}
               <div className="mb-4">
                   Informações do Cliente
-                </h2>
+                
                 
                 {/* Horizontal layout for landscape */}
                 <div className="grid grid-cols-4 gap-4">

@@ -482,6 +482,11 @@ export function A4ReportPreview({
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
+                    
+                  </h3>
+                    <FileText className="h-8 w-8 text-indigo-600 mr-3" />
+                    const allNonCompliantValues: Array<{
+                      date: string;
                       pointName: string;
                       parameter: string;
                       value: string;
@@ -556,6 +561,39 @@ export function A4ReportPreview({
                       </div>
                     );
                   })()}
+                </div>
+              )}
+
+              {/* Loading indicator for real data */}
+              {isLoadingAnalysis && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+                  <div className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 mr-2" />
+                    <span className="text-sm text-blue-700">Carregando dados reais de qualidade da água...</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Real data summary */}
+              {realAnalysis && (
+                <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-4">
+                  <h4 className="font-semibold text-green-900 mb-2 text-sm">Dados Reais Carregados</h4>
+                  <div className="grid grid-cols-3 gap-2 text-xs text-green-800">
+                    <div>Total de Amostras: <strong>{realAnalysis.totalSamples}</strong></div>
+                    <div>Taxa de Conformidade: <strong>{realAnalysis.complianceRate.toFixed(1)}%</strong></div>
+                    <div>Parâmetros Monitorados: <strong>{realStats.totalParameters}</strong></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show data source indicator */}
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
+                <div className="text-xs text-gray-600 text-center">
+                  {realAnalysis ? (
+                    <span className="text-green-600 font-medium">✓ Usando dados reais da análise de conformidade</span>
+                  ) : (
+                    <span className="text-orange-600 font-medium">⚠ Usando dados estimados (carregando dados reais...)</span>
+                  })()}
                   </div>
                 </div>
               )}
@@ -592,6 +630,11 @@ export function A4ReportPreview({
                   )}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Chart Pages - Using real collection points data */}
+          {currentPage > 1 && currentPage <= 1 + totalChartPages && (
 
               {/* Key Metrics - HIDDEN AS REQUESTED */}
               {false && (

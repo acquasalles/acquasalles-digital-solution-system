@@ -407,7 +407,7 @@ export function A4ReportPreview({
               {/* Client Information Section - Optimized for Landscape */}
               <div className="mb-4">
                   Informações do Cliente
-                
+                </h2>
                 
                 {/* Horizontal layout for landscape */}
                 <div className="grid grid-cols-4 gap-4">
@@ -482,7 +482,15 @@ export function A4ReportPreview({
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
-            </div>
+                    const allNonCompliantValues: Array<{
+                      date: string;
+                      pointName: string;
+                      parameter: string;
+                      value: string;
+                      riskLevel: string;
+                      riskColor: string;
+                    }> = [];
+                    
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
                       const parameterName = key === 'ph' ? 'pH' : key === 'chlorine' ? 'Cloro Residual' : 'Turbidez';
                       const unit = key === 'ph' ? '' : key === 'chlorine' ? 'mg/L' : 'NTU';

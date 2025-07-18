@@ -513,8 +513,6 @@ export function A4ReportPreview({
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
                   </h4>
-                  {(() => {
-                    // Collect all non-compliant values from all parameters
                     const allNonCompliantValues = [];
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
                       const parameterName = key === 'ph' ? 'pH' : key === 'chlorine' ? 'Cloro Residual' : 'Turbidez';

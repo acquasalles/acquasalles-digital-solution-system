@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { Download, Printer, Calendar, MapPin, Phone, Mail, Building, FileText, Loader2 } from 'lucide-react';
+import { Download, Printer, Calendar, MapPin, Phone, Mail, Building, FileText, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Bar } from 'react-chartjs-2';
 import { generatePDF } from '../lib/generatePDF';
@@ -482,8 +482,8 @@ export function A4ReportPreview({
                     <div className="text-xs text-gray-600">Pontos de Coleta</div>
                   </div>
                   <div className="bg-white p-2 rounded-lg">
-                    <div className="text-lg font-bold text-green-600">{realAnalysis?.totalSamples || realStats.totalMeasurementDays}</div>
-                    <div className="text-xs text-gray-600">Total de Amostras</div>
+                    <div className="text-lg font-bold text-green-600">{realStats.totalMeasurementDays}</div>
+                    <div className="text-xs text-gray-600">Dias com Medições</div>
                   </div>
                   <div className="bg-white p-2 rounded-lg">
                     <div className="text-lg font-bold text-purple-600">
@@ -506,15 +506,45 @@ export function A4ReportPreview({
                 </div>
               </div>
 
-              {/* Additional summary with days information */}
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                <h4 className="font-semibold text-gray-900 mb-2 text-sm">Informações Complementares</h4>
-                <div className="grid grid-cols-3 gap-2 text-xs text-gray-800">
-                  <div>Dias com Medições: <strong>{realStats.totalMeasurementDays}</strong></div>
-                  <div>Período Analisado: <strong>{realStats.daysAnalyzed} dias</strong></div>
-                  <div>Pontos Estimados: <strong>{realStats.totalCollectionPoints}</strong></div>
+              {/* Non-conformities section */}
+              {realAnalysis && (
+                <div className="bg-red-50 p-3 rounded-lg border border-red-200 mb-4">
+                  <h4 className="font-semibold text-red-900 mb-2 text-sm flex items-center">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Ocorrências de Não Conformidades
+                  </h4>
+                  <div className="space-y-2 text-xs">
+                    {Object.entries(realAnalysis.parameterStats).map(([key, stats]) => {
+                      const parameterName = key === 'ph' ? 'pH' : key === 'chlorine' ? 'Cloro Residual' : 'Turbidez';
+                      const totalNonCompliant = stats.nonCompliantValues.length;
+                      const highRisk = stats.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length;
+                      const mediumRisk = stats.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length;
+                      const lowRisk = stats.nonCompliantValues.filter(nc => nc.riskLevel === 'baixo').length;
+                      
+                      if (totalNonCompliant === 0) return null;
+                      
+                      return (
+                        <div key={key} className="bg-white p-2 rounded border border-red-200">
+                          <div className="font-medium text-red-800 mb-1">{parameterName}</div>
+                          <div className="grid grid-cols-4 gap-2 text-xs text-red-700">
+                            <div>Total: <strong>{totalNonCompliant}</strong></div>
+                            {highRisk > 0 && <div className="text-red-800">Alto: <strong>{highRisk}</strong></div>}
+                            {mediumRisk > 0 && <div className="text-orange-700">Médio: <strong>{mediumRisk}</strong></div>}
+                            {lowRisk > 0 && <div className="text-yellow-700">Baixo: <strong>{lowRisk}</strong></div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    
+                    {Object.values(realAnalysis.parameterStats).every(stats => stats.nonCompliantValues.length === 0) && (
+                      <div className="bg-green-50 p-2 rounded border border-green-200 text-green-800 text-center">
+                        <CheckCircle className="h-4 w-4 inline mr-1" />
+                        Nenhuma não conformidade detectada no período
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Loading indicator for real data */}
               {isLoadingAnalysis && (

@@ -513,35 +513,77 @@ export function A4ReportPreview({
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
                   </h4>
-                  <div className="space-y-2 text-xs">
-                    {Object.entries(realAnalysis.parameterStats).map(([key, stats]) => {
+                  {(() => {
+                    // Collect all non-compliant values from all parameters
+                    const allNonCompliantValues = [];
+                    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
                       const parameterName = key === 'ph' ? 'pH' : key === 'chlorine' ? 'Cloro Residual' : 'Turbidez';
-                      const totalNonCompliant = stats.nonCompliantValues.length;
-                      const highRisk = stats.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length;
-                      const mediumRisk = stats.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length;
-                      const lowRisk = stats.nonCompliantValues.filter(nc => nc.riskLevel === 'baixo').length;
+                      const unit = key === 'ph' ? '' : key === 'chlorine' ? 'mg/L' : 'NTU';
                       
-                      if (totalNonCompliant === 0) return null;
-                      
+                      stats.nonCompliantValues.forEach(nc => {
+                        allNonCompliantValues.push({
+                          date: format(nc.timestamp, 'dd/MM/yyyy'),
+                          pointName: nc.pointName,
+                          parameter: parameterName,
+                          value: `${nc.value.toFixed(2)}${unit ? ` ${unit}` : ''}`,
+                          riskLevel: nc.riskLevel,
+                          riskColor: nc.riskLevel === 'alto' ? 'text-red-800' : 
+                                   nc.riskLevel === 'médio' ? 'text-orange-700' : 'text-yellow-700'
+                        });
+                      });
+                    });
+                    
+                    // Sort by date (most recent first)
+                    allNonCompliantValues.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    
+                    if (allNonCompliantValues.length === 0) {
                       return (
-                        <div key={key} className="bg-white p-2 rounded border border-red-200">
-                          <div className="font-medium text-red-800 mb-1">{parameterName}</div>
-                          <div className="grid grid-cols-4 gap-2 text-xs text-red-700">
-                            <div>Total: <strong>{totalNonCompliant}</strong></div>
-                            {highRisk > 0 && <div className="text-red-800">Alto: <strong>{highRisk}</strong></div>}
-                            {mediumRisk > 0 && <div className="text-orange-700">Médio: <strong>{mediumRisk}</strong></div>}
-                            {lowRisk > 0 && <div className="text-yellow-700">Baixo: <strong>{lowRisk}</strong></div>}
-                          </div>
+                        <div className="bg-green-50 p-2 rounded border border-green-200 text-green-800 text-center text-xs">
+                          <CheckCircle className="h-4 w-4 inline mr-1" />
+                          Nenhuma não conformidade detectada no período
                         </div>
                       );
-                    })}
+                    }
                     
-                    {Object.values(realAnalysis.parameterStats).every(stats => stats.nonCompliantValues.length === 0) && (
-                      <div className="bg-green-50 p-2 rounded border border-green-200 text-green-800 text-center">
-                        <CheckCircle className="h-4 w-4 inline mr-1" />
-                        Nenhuma não conformidade detectada no período
+                    return (
+                      <div className="bg-white rounded border border-red-200 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full text-xs">
+                            <thead className="bg-red-100">
+                              <tr>
+                                <th className="px-2 py-1 text-left font-medium text-red-800">Data</th>
+                                <th className="px-2 py-1 text-left font-medium text-red-800">Ponto de Coleta</th>
+                                <th className="px-2 py-1 text-left font-medium text-red-800">Parâmetro</th>
+                                <th className="px-2 py-1 text-center font-medium text-red-800">Valor</th>
+                                <th className="px-2 py-1 text-center font-medium text-red-800">Nível de Risco</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-red-100">
+                              {allNonCompliantValues.slice(0, 10).map((nc, index) => (
+                                <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-red-25'}>
+                                  <td className="px-2 py-1 text-gray-900 font-medium">{nc.date}</td>
+                                  <td className="px-2 py-1 text-gray-900">{nc.pointName}</td>
+                                  <td className="px-2 py-1 text-gray-900 font-medium">{nc.parameter}</td>
+                                  <td className="px-2 py-1 text-center text-red-700 font-medium">{nc.value}</td>
+                                  <td className="px-2 py-1 text-center">
+                                    <span className={`inline-flex items-center px-1 py-0.5 rounded text-xs font-medium ${nc.riskColor}`}>
+                                      {nc.riskLevel.toUpperCase()}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        {allNonCompliantValues.length > 10 && (
+                          <div className="bg-red-100 px-2 py-1 text-center text-xs text-red-700">
+                            Mostrando 10 de {allNonCompliantValues.length} não conformidades
+                          </div>
+                        )}
                       </div>
-                    )}
+                    );
+                  })()}
+                    
                   </div>
                 </div>
               )}

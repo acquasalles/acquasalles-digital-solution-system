@@ -419,8 +419,6 @@ export function A4ReportPreview({
                       <div>
                         <span className="font-medium text-gray-700 text-xs">Razão Social:</span>
                         <div className="text-gray-900 text-xs">{clientInfo.name}</div>
-                      </div>
-                      <div>
                         <span className="font-medium text-gray-700 text-xs">CNPJ:</span>
                         <div className="text-gray-900 text-xs">{clientInfo.cnpj}</div>
                       </div>
@@ -438,23 +436,6 @@ export function A4ReportPreview({
                     </div>
                   </div>
 
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">Contato</h3>
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Phone className="h-2 w-2 mr-1 text-gray-600" />
-                        <span className="text-gray-900 text-xs">{clientInfo.phone}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Mail className="h-2 w-2 mr-1 text-gray-600" />
-                        <span className="text-gray-900 text-xs">{clientInfo.email}</span>
-                      </div>
-                      <div className="mt-1">
-                        <span className="font-medium text-gray-700 text-xs">Responsável:</span>
-                        <div className="text-gray-900 text-xs">{clientInfo.contact}</div>
-                      </div>
-                    </div>
-                  </div>
 
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                     <h3 className="font-semibold text-blue-900 mb-2 flex items-center text-sm">
@@ -471,12 +452,12 @@ export function A4ReportPreview({
               </div>
 
               {/* Summary Section - Using real data */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200 mb-4">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200 mb-4 mt-4">
                 <h3 className="font-semibold text-blue-900 mb-3 flex items-center text-sm">
                   <FileText className="h-4 w-4 mr-2" />
                   Resumo Executivo
                 </h3>
-                <div className="grid grid-cols-6 gap-3 text-center">
+                <div className="grid grid-cols-4 gap-4 text-center">
                   <div className="bg-white p-2 rounded-lg">
                     <div className="text-lg font-bold text-blue-600">{realStats.totalCollectionPoints}</div>
                     <div className="text-xs text-gray-600">Pontos de Coleta</div>
@@ -495,14 +476,6 @@ export function A4ReportPreview({
                     <div className="text-lg font-bold text-orange-600">{realAnalysis?.complianceRate.toFixed(1) || '0'}%</div>
                     <div className="text-xs text-gray-600">Taxa Conformidade</div>
                   </div>
-                  <div className="bg-white p-2 rounded-lg">
-                    <div className="text-lg font-bold text-yellow-600">{realStats.warnings}</div>
-                    <div className="text-xs text-gray-600">Avisos</div>
-                  </div>
-                  <div className="bg-white p-2 rounded-lg">
-                    <div className="text-lg font-bold text-red-600">{realStats.criticalAlerts}</div>
-                    <div className="text-xs text-gray-600">Alertas Críticos</div>
-                  </div>
                 </div>
               </div>
 
@@ -512,7 +485,7 @@ export function A4ReportPreview({
                   <h4 className="font-semibold text-red-900 mb-2 text-sm flex items-center">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
-                  </h4>
+                    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
                   {(() => {
                     const allNonCompliantValues = [];
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
@@ -582,6 +555,7 @@ export function A4ReportPreview({
                       </div>
                     );
                   })()}
+                  </div>
                 </div>
               )}
 

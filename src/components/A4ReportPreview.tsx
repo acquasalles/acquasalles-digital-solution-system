@@ -482,8 +482,6 @@ export function A4ReportPreview({
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
-            { label: 'Taxa Conformidade', value: realAnalysis?.complianceRate.toFixed(1) + '%' || '0%' },
-            { label: 'Não Conformidades', value: realAnalysis ? Object.values(realAnalysis.parameterStats).reduce((sum, stat) => sum + stat.nonCompliantValues.length, 0).toString() : '0' }
                   </div>
                   <div className="text-sm text-red-700">Não Conformidades</div>
                 </div>

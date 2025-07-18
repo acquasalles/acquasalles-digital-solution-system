@@ -406,8 +406,6 @@ export function A4ReportPreview({
 
               {/* Client Information Section - Optimized for Landscape */}
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
-                  <Building className="h-4 w-4 mr-2 text-blue-600" />
                   Informações do Cliente
                 </h2>
                 
@@ -422,29 +420,6 @@ export function A4ReportPreview({
                         <span className="font-medium text-gray-700 text-xs">CNPJ:</span>
                         <div className="text-gray-900 text-xs">{clientInfo.cnpj}</div>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center text-sm">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      Endereço
-                    </h3>
-                    <div className="space-y-1 text-gray-900 text-xs">
-                      <div>{clientInfo.address}</div>
-                      <div>{clientInfo.city} - {clientInfo.state}</div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center text-sm">
-                      <Phone className="h-3 w-3 mr-1" />
-                      Contato
-                    </h3>
-                    <div className="space-y-1 text-gray-900 text-xs">
-                      <div>{clientInfo.phone}</div>
-                      <div>{clientInfo.email}</div>
-                      <div className="font-medium">{clientInfo.contact}</div>
                     </div>
                   </div>
 
@@ -496,7 +471,7 @@ export function A4ReportPreview({
                   <h4 className="font-semibold text-red-900 mb-2 text-sm flex items-center">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
-                  </h4>
+                    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
                   {(() => {
                     const allNonCompliantValues = [];
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
@@ -566,6 +541,7 @@ export function A4ReportPreview({
                       </div>
                     );
                   })()}
+                  </div>
                 </div>
               )}
 

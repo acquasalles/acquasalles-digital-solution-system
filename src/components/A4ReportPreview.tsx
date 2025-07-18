@@ -406,7 +406,6 @@ export function A4ReportPreview({
 
               {/* Client Information Section - Optimized for Landscape */}
               <div className="mb-4">
-                <h2 className="text-base font-semibold text-gray-900 mb-3">
                   Informações do Cliente
                 </h2>
                 
@@ -416,10 +415,20 @@ export function A4ReportPreview({
                     <h3 className="font-semibold text-gray-900 mb-2 text-sm">Dados da Empresa</h3>
                     <div className="space-y-1">
                       <div>
-                        <span className="font-medium text-gray-700 text-xs">Razão Social:</span>
-                        <div className="text-gray-900 text-xs">{clientInfo.name}</div>
                         <span className="font-medium text-gray-700 text-xs">CNPJ:</span>
                         <div className="text-gray-900 text-xs">{clientInfo.cnpj}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">Endereço</h3>
+                    <div className="space-y-1">
+                      <div>
+                        <span className="font-medium text-gray-700 text-xs">Endereço:</span>
+                        <div className="text-gray-900 text-xs">{clientInfo.address}</div>
+                        <span className="font-medium text-gray-700 text-xs">Cidade:</span>
+                        <div className="text-gray-900 text-xs">{clientInfo.city} - {clientInfo.state}</div>
                       </div>
                     </div>
                   </div>
@@ -472,7 +481,7 @@ export function A4ReportPreview({
                   <h4 className="font-semibold text-red-900 mb-2 text-sm flex items-center">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
-                  </h4>
+                    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
                   {(() => {
                     const allNonCompliantValues = [];
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
@@ -542,6 +551,7 @@ export function A4ReportPreview({
                       </div>
                     );
                   })()}
+                  </div>
                 </div>
               )}
 

@@ -94,6 +94,11 @@ export function WaterQualityAnalysisReport({
     const selectedClient = clients.find(c => c.id === clientId);
     const clientName = selectedClient?.razao_social || 'Cliente';
     
+    console.log('=== DEBUGGING TRANSFORM ANALYSIS DATA ===');
+    console.log('Analysis data:', analysis);
+    console.log('Samples data:', samples);
+    console.log('Selected client:', selectedClient);
+    
     // Group samples by collection point
     const pointsMap = new Map<string, {
       pointId: string;
@@ -126,6 +131,9 @@ export function WaterQualityAnalysisReport({
         point.lastMeasurement = sample.timestamp;
       }
     });
+
+    console.log('Points map size:', pointsMap.size);
+    console.log('Points map keys:', Array.from(pointsMap.keys()));
 
     // Convert to collection point analysis format
     const collectionPoints: CollectionPointAnalysis[] = Array.from(pointsMap.values()).map(point => {
@@ -191,18 +199,34 @@ export function WaterQualityAnalysisReport({
       };
     });
 
-    // Calculate real statistics from the analysis data
-    const uniqueCollectionPoints = collectionPoints.length;
+    // Calculate REAL statistics from the actual analysis data
+    const uniqueCollectionPoints = pointsMap.size; // Use map size for unique count
     const totalDaysWithMeasurements = new Set(samples.map(s => s.timestamp.toDateString())).size;
-    const totalParameters = Object.values(analysis.parameterStats).reduce((sum, stat) => 
-      sum + (stat.totalMeasurements > 0 ? 1 : 0), 0
-    );
-    const criticalIssues = Object.values(analysis.parameterStats).reduce((sum, stat) => 
-      sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length, 0
-    );
-    const warnings = Object.values(analysis.parameterStats).reduce((sum, stat) => 
-      sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length, 0
-    );
+    
+    // Count parameters that actually have measurements
+    const totalParameters = Object.entries(analysis.parameterStats).reduce((sum, [key, stat]) => {
+      return sum + (stat.totalMeasurements > 0 ? 1 : 0);
+    }, 0);
+    
+    // Count critical issues (risco alto)
+    const criticalIssues = Object.entries(analysis.parameterStats).reduce((sum, [key, stat]) => {
+      const criticalCount = stat.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length;
+      return sum + criticalCount;
+    }, 0);
+    
+    // Count warnings (risco médio)
+    const warnings = Object.entries(analysis.parameterStats).reduce((sum, [key, stat]) => {
+      const warningCount = stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length;
+      return sum + warningCount;
+    }, 0);
+
+    console.log('=== CALCULATED STATISTICS ===');
+    console.log('Unique collection points:', uniqueCollectionPoints);
+    console.log('Total days with measurements:', totalDaysWithMeasurements);
+    console.log('Total parameters:', totalParameters);
+    console.log('Critical issues:', criticalIssues);
+    console.log('Warnings:', warnings);
+    console.log('Parameter stats:', analysis.parameterStats);
 
     return {
       reportId: `WQR-${format(new Date(), 'yyyyMMdd-HHmmss')}`,
@@ -217,7 +241,6 @@ export function WaterQualityAnalysisReport({
       criticalIssues,
       warnings,
       collectionPoints,
-      // Add calculated statistics for the summary cards
       uniqueCollectionPoints,
       totalDaysWithMeasurements,
       totalParameters

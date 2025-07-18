@@ -71,27 +71,6 @@ export function WaterQualityComplianceAnalysis({
     );
   };
 
-  const getOverallComplianceIcon = (compliance: boolean | null) => {
-    if (compliance === null) {
-      return <span className="h-5 w-5 text-gray-500">N/A</span>;
-    }
-    return compliance ? (
-      <CheckCircle className="h-5 w-5 text-green-500" />
-    ) : (
-      <XCircle className="h-5 w-5 text-red-500" />
-    );
-  };
-
-  const getOverallComplianceText = (compliance: boolean | null) => {
-    if (compliance === null) return 'N/A';
-    return compliance ? 'CONFORME' : 'NÃO CONFORME';
-  };
-
-  const getOverallComplianceColor = (compliance: boolean | null) => {
-    if (compliance === null) return 'text-gray-700';
-    return compliance ? 'text-green-700' : 'text-red-700';
-  };
-
   const getRiskColor = (riskLevel: string) => {
     switch (riskLevel) {
       case 'baixo':
@@ -361,10 +340,7 @@ export function WaterQualityComplianceAnalysis({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {samples.map((sample) => (
-                    <tr key={sample.id} className={
-                      sample.overallCompliance === null ? 'bg-gray-50' : 
-                      sample.overallCompliance ? 'bg-white' : 'bg-red-50'
-                    }>
+                    <tr key={sample.id} className={sample.overallCompliance ? 'bg-white' : 'bg-red-50'}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div>
                           <div className="font-medium">{format(sample.timestamp, 'dd/MM/yyyy')}</div>
@@ -421,9 +397,11 @@ export function WaterQualityComplianceAnalysis({
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-center">
                         <div className="flex items-center justify-center space-x-2">
-                          {getOverallComplianceIcon(sample.overallCompliance)}
-                          <span className={`text-sm font-medium ${getOverallComplianceColor(sample.overallCompliance)}`}>
-                            {getOverallComplianceText(sample.overallCompliance)}
+                          {getComplianceIcon(sample.overallCompliance)}
+                          <span className={`text-sm font-medium ${
+                            sample.overallCompliance ? 'text-green-700' : 'text-red-700'
+                          }`}>
+                            {sample.overallCompliance ? 'CONFORME' : 'NÃO CONFORME'}
                           </span>
                         </div>
                       </td>

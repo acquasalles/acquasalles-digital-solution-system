@@ -22,7 +22,7 @@ export interface WaterQualitySample {
     chlorine?: WaterQualityParameter;
     turbidity?: WaterQualityParameter;
   };
-  overallCompliance: boolean | null; // null = N/A, true = conforme, false = não conforme
+  overallCompliance: boolean;
   nonComplianceCount: number;
 }
 

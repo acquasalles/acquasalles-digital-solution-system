@@ -36,101 +36,227 @@ interface WaterQualityAnalysisData {
 }
 
 interface WaterQualityAnalysisReportProps {
-  data?: WaterQualityAnalysisData;
+  clientId?: string;
+  startDate?: string;
+  endDate?: string;
   isVisible: boolean;
   onClose?: () => void;
 }
 
-// Sample analysis data
-const generateSampleAnalysis = (): WaterQualityAnalysisData => {
-  const now = new Date();
-  const startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
-  
-  return {
-    reportId: `WQR-${format(now, 'yyyyMMdd-HHmmss')}`,
-    generatedAt: now,
-    dateRange: { start: startDate, end: now },
-    clientName: 'ACQUASALLES LTDA',
-    totalMeasurements: 156,
-    overallCompliance: 87.5,
-    criticalIssues: 2,
-    warnings: 8,
-    collectionPoints: [
-      {
-        pointId: 'point-a1',
-        pointName: 'Ponto A1',
-        areaName: 'Área Industrial Principal',
-        lastMeasurement: new Date(now.getTime() - 2 * 60 * 60 * 1000),
-        overallStatus: 'compliant',
-        complianceScore: 92.3,
-        parameters: [
-          {
-            name: 'pH',
-            value: 7.2,
-            unit: '',
-            normalRange: { min: 6.5, max: 8.5 },
-            status: 'normal',
-            trend: 'stable',
-            icon: <Beaker className="h-4 w-4" />
-          },
-          {
-            name: 'Cloro Residual',
-            value: 1.8,
-            unit: 'mg/L',
-            normalRange: { min: 0.5, max: 2.0 },
-            status: 'normal',
-            trend: 'up',
-            icon: <Droplets className="h-4 w-4" />
-          },
-          {
-            name: 'Turbidez',
-            value: 2.1,
-            unit: 'NTU',
-            normalRange: { min: 0, max: 5.0 },
-            status: 'normal',
-            trend: 'down',
-            icon: <Eye className="h-4 w-4" />
-          }
-        ]
-      },
-      {
-        pointId: 'point-a2',
-        pointName: 'Ponto A2',
-        areaName: 'Área Industrial Principal',
-        lastMeasurement: new Date(now.getTime() - 1 * 60 * 60 * 1000),
-        overallStatus: 'warning',
-        complianceScore: 78.5,
-        parameters: [
-          {
-            name: 'Hidrômetro',
-            value: 45230,
-            unit: 'L',
-            normalRange: { min: 0, max: 50000 },
-            status: 'warning',
-            trend: 'up',
-            icon: <TrendingUp className="h-4 w-4" />
-          },
-          {
-            name: 'Vazão',
-            value: 650,
-            unit: 'L/h',
-            normalRange: { min: 400, max: 800 },
-            status: 'normal',
-            trend: 'stable',
-            icon: <Droplets className="h-4 w-4" />
-          }
-        ]
-      }
-    ]
-  };
-};
+import { fetchWaterQualityData, generateComplianceAnalysis, COMPLIANCE_LIMITS } from '../lib/waterQualityCompliance';
+import type { WaterQualitySample, ComplianceAnalysis } from '../types/waterQuality';
+import { useClients } from '../lib/ClientsContext';
 
 export function WaterQualityAnalysisReport({ 
-  data = generateSampleAnalysis(), 
+  clientId,
+  startDate,
+  endDate,
   isVisible,
   onClose 
 }: WaterQualityAnalysisReportProps) {
+  const [samples, setSamples] = useState<WaterQualitySample[]>([]);
+  const [analysis, setAnalysis] = useState<ComplianceAnalysis | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { clients } = useClients();
   const intl = useIntl();
+
+  useEffect(() => {
+    if (isVisible && clientId && startDate && endDate) {
+      loadWaterQualityData();
+    }
+  }, [isVisible, clientId, startDate, endDate]);
+
+  const loadWaterQualityData = async () => {
+    if (!clientId || !startDate || !endDate) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const waterQualityData = await fetchWaterQualityData(clientId, startDate, endDate);
+      setSamples(waterQualityData);
+      
+      const complianceAnalysis = generateComplianceAnalysis(waterQualityData);
+      setAnalysis(complianceAnalysis);
+    } catch (err) {
+      console.error('Erro ao carregar dados de qualidade da água:', err);
+      setError('Erro ao carregar dados de qualidade da água');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Transform compliance analysis to match the expected format
+  const transformAnalysisData = (analysis: ComplianceAnalysis): WaterQualityAnalysisData => {
+    const selectedClient = clients.find(c => c.id === clientId);
+    const clientName = selectedClient?.razao_social || 'Cliente';
+    
+    // Group samples by collection point
+    const pointsMap = new Map<string, {
+      pointId: string;
+      pointName: string;
+      areaName: string;
+      lastMeasurement: Date;
+      parameters: WaterQualityParameter[];
+      samples: WaterQualitySample[];
+    }>();
+
+    samples.forEach(sample => {
+      const key = `${sample.collectionPointId}-${sample.collectionPointName}`;
+      
+      if (!pointsMap.has(key)) {
+        pointsMap.set(key, {
+          pointId: sample.collectionPointId,
+          pointName: sample.collectionPointName,
+          areaName: sample.areaName,
+          lastMeasurement: sample.timestamp,
+          parameters: [],
+          samples: []
+        });
+      }
+      
+      const point = pointsMap.get(key)!;
+      point.samples.push(sample);
+      
+      // Update last measurement if this sample is more recent
+      if (sample.timestamp > point.lastMeasurement) {
+        point.lastMeasurement = sample.timestamp;
+      }
+    });
+
+    // Convert to collection point analysis format
+    const collectionPoints: CollectionPointAnalysis[] = Array.from(pointsMap.values()).map(point => {
+      const parameters: WaterQualityParameter[] = [];
+      
+      // Calculate average values and status for each parameter
+      const phValues = point.samples.map(s => s.parameters.ph).filter(Boolean);
+      const chlorineValues = point.samples.map(s => s.parameters.chlorine).filter(Boolean);
+      const turbidityValues = point.samples.map(s => s.parameters.turbidity).filter(Boolean);
+      
+      if (phValues.length > 0) {
+        const avgValue = phValues.reduce((sum, p) => sum + p!.value, 0) / phValues.length;
+        const compliantCount = phValues.filter(p => p!.isCompliant).length;
+        parameters.push({
+          name: 'pH',
+          value: Number(avgValue.toFixed(2)),
+          unit: '',
+          normalRange: COMPLIANCE_LIMITS.ph,
+          status: compliantCount / phValues.length > 0.8 ? 'normal' : 'warning',
+          trend: 'stable',
+          icon: <Beaker className="h-4 w-4" />
+        });
+      }
+      
+      if (chlorineValues.length > 0) {
+        const avgValue = chlorineValues.reduce((sum, p) => sum + p!.value, 0) / chlorineValues.length;
+        const compliantCount = chlorineValues.filter(p => p!.isCompliant).length;
+        parameters.push({
+          name: 'Cloro Residual',
+          value: Number(avgValue.toFixed(2)),
+          unit: 'mg/L',
+          normalRange: { min: 0, max: COMPLIANCE_LIMITS.chlorine.max },
+          status: compliantCount / chlorineValues.length > 0.8 ? 'normal' : 'warning',
+          trend: 'stable',
+          icon: <Droplets className="h-4 w-4" />
+        });
+      }
+      
+      if (turbidityValues.length > 0) {
+        const avgValue = turbidityValues.reduce((sum, p) => sum + p!.value, 0) / turbidityValues.length;
+        const compliantCount = turbidityValues.filter(p => p!.isCompliant).length;
+        parameters.push({
+          name: 'Turbidez',
+          value: Number(avgValue.toFixed(2)),
+          unit: 'NTU',
+          normalRange: { min: 0, max: COMPLIANCE_LIMITS.turbidity.max },
+          status: compliantCount / turbidityValues.length > 0.8 ? 'normal' : 'warning',
+          trend: 'stable',
+          icon: <Eye className="h-4 w-4" />
+        });
+      }
+      
+      const overallCompliance = point.samples.filter(s => s.overallCompliance).length / point.samples.length;
+      
+      return {
+        pointId: point.pointId,
+        pointName: point.pointName,
+        areaName: point.areaName,
+        lastMeasurement: point.lastMeasurement,
+        parameters,
+        overallStatus: overallCompliance > 0.9 ? 'compliant' : overallCompliance > 0.7 ? 'warning' : 'non-compliant',
+        complianceScore: Number((overallCompliance * 100).toFixed(1))
+      };
+    });
+
+    return {
+      reportId: `WQR-${format(new Date(), 'yyyyMMdd-HHmmss')}`,
+      generatedAt: new Date(),
+      dateRange: { 
+        start: new Date(startDate!), 
+        end: new Date(endDate!) 
+      },
+      clientName,
+      totalMeasurements: analysis.totalSamples,
+      overallCompliance: analysis.complianceRate,
+      criticalIssues: Object.values(analysis.parameterStats).reduce((sum, stat) => 
+        sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length, 0
+      ),
+      warnings: Object.values(analysis.parameterStats).reduce((sum, stat) => 
+        sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length, 0
+      ),
+      collectionPoints
+    };
+  };
+
+  if (!isVisible) return null;
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 mt-6">
+        <div className="p-8 flex items-center justify-center">
+          <div className="flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="text-lg font-medium text-gray-700">
+              Carregando análise de qualidade da água...
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 mt-6">
+        <div className="p-8 text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Erro na Análise</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={loadWaterQualityData}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 mt-6">
+        <div className="p-8 text-center">
+          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum Dado Encontrado</h3>
+          <p className="text-gray-600">Não foram encontrados dados de qualidade da água para o período selecionado.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const data = transformAnalysisData(analysis);
 
   const getStatusColor = (status: string) => {
     switch (status) {

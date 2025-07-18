@@ -560,7 +560,10 @@ export function AdminPage() {
             )}
 
             {/* Water Quality Analysis Report */}
-            <WaterQualityAnalysisReport 
+            <WaterQualityAnalysisReport
+              clientId={selectedClient}
+              startDate={startDate}
+              endDate={endDate}
               isVisible={showWaterQualityReport}
               onClose={() => setShowWaterQualityReport(false)}
             />

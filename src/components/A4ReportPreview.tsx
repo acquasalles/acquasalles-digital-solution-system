@@ -632,6 +632,21 @@ export function A4ReportPreview({
                             right: 5
                           }
                         },
+                        plugins: {
+                          ...point.graphOptions?.plugins,
+                          title: { display: false },
+                          legend: { 
+                            display: true,
+                            position: 'bottom' as const,
+                            labels: {
+                              font: { size: 7 },
+                              padding: 3,
+                              usePointStyle: true,
+                              boxWidth: 5,
+                              boxHeight: 5
+                            }
+                          }
+                        },
                         scales: {
                           ...point.graphOptions?.scales,
                           x: {
@@ -648,171 +663,6 @@ export function A4ReportPreview({
                               font: { size: 7 },
                               maxTicksLimit: 5
                             }
-                          }
-                        },
-                        plugins: {
-                          title: { display: false },
-                          legend: { 
-                            display: true,
-                            position: 'bottom' as const,
-                            labels: {
-                              font: { size: 7 },
-                              padding: 3,
-                              usePointStyle: true,
-                              boxWidth: 5,
-                              boxHeight: 5
-                            }
-                          },
-                          annotation: {
-                            annotations: (() => {
-                              const annotations: any = {};
-                              
-                              // Add reference lines based on measurement types in this point
-                              const hasPhMeasurement = point.datasetStats.some(stat => 
-                                stat.label.toLowerCase().includes('ph')
-                              );
-                              const hasChlorineMeasurement = point.datasetStats.some(stat => 
-                                stat.label.toLowerCase().includes('cloro') || 
-                                stat.label.toLowerCase().includes('chlorine')
-                              );
-                              const hasTurbidityMeasurement = point.datasetStats.some(stat => 
-                                stat.label.toLowerCase().includes('turbidez') || 
-                                stat.label.toLowerCase().includes('turbidity')
-                              );
-                              
-                              // pH Reference Lines (6.5 - 8.5 acceptable range)
-                              if (hasPhMeasurement) {
-                                annotations.phMinLine = {
-                                  type: 'line',
-                                  yMin: 6.5,
-                                  yMax: 6.5,
-                                  borderColor: 'rgba(255, 193, 7, 0.8)', // Orange for warning
-                                  borderWidth: 1.5,
-                                  borderDash: [5, 5],
-                                  label: {
-                                    content: 'pH Min (6.5)',
-                                    enabled: true,
-                                    position: 'end',
-                                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
-                                    color: 'white',
-                                    font: { size: 6 },
-                                    padding: 2
-                                  }
-                                };
-                                annotations.phMaxLine = {
-                                  type: 'line',
-                                  yMin: 8.5,
-                                  yMax: 8.5,
-                                  borderColor: 'rgba(255, 193, 7, 0.8)', // Orange for warning
-                                  borderWidth: 1.5,
-                                  borderDash: [5, 5],
-                                  label: {
-                                    content: 'pH Max (8.5)',
-                                    enabled: true,
-                                    position: 'start',
-                                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
-                                    color: 'white',
-                                    font: { size: 6 },
-                                    padding: 2
-                                  }
-                                };
-                                annotations.phTargetLine = {
-                                  type: 'line',
-                                  yMin: 7.0,
-                                  yMax: 7.0,
-                                  borderColor: 'rgba(34, 197, 94, 0.8)', // Green for target
-                                  borderWidth: 2,
-                                  borderDash: [3, 3],
-                                  label: {
-                                    content: 'pH Target (7.0)',
-                                    enabled: true,
-                                    position: 'center',
-                                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                                    color: 'white',
-                                    font: { size: 6 },
-                                    padding: 2
-                                  }
-                                };
-                              }
-                              
-                              // Chlorine Reference Lines (0.2 - 2.0 mg/L acceptable range)
-                              if (hasChlorineMeasurement) {
-                                annotations.chlorineMinLine = {
-                                  type: 'line',
-                                  yMin: 0.2,
-                                  yMax: 0.2,
-                                  borderColor: 'rgba(255, 193, 7, 0.8)', // Orange for warning
-                                  borderWidth: 1.5,
-                                  borderDash: [5, 5],
-                                  label: {
-                                    content: 'Cloro Min (0.2)',
-                                    enabled: true,
-                                    position: 'end',
-                                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
-                                    color: 'white',
-                                    font: { size: 6 },
-                                    padding: 2
-                                  }
-                                };
-                                annotations.chlorineMaxLine = {
-                                  type: 'line',
-                                  yMin: 2.0,
-                                  yMax: 2.0,
-                                  borderColor: 'rgba(239, 68, 68, 0.8)', // Red for maximum limit
-                                  borderWidth: 2,
-                                  borderDash: [8, 4],
-                                  label: {
-                                    content: 'Cloro Max (2.0)',
-                                    enabled: true,
-                                    position: 'start',
-                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                                    color: 'white',
-                                    font: { size: 6 },
-                                    padding: 2
-                                  }
-                                };
-                              }
-                              
-                              // Turbidity Reference Lines (max 4.0 NTU)
-                              if (hasTurbidityMeasurement) {
-                                annotations.turbidityMaxLine = {
-                                  type: 'line',
-                                  yMin: 4.0,
-                                  yMax: 4.0,
-                                  borderColor: 'rgba(239, 68, 68, 0.8)', // Red for maximum limit
-                                  borderWidth: 2,
-                                  borderDash: [8, 4],
-                                  label: {
-                                    content: 'Turbidez Max (4.0)',
-                                    enabled: true,
-                                    position: 'end',
-                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                                    color: 'white',
-                                    font: { size: 6 },
-                                    padding: 2
-                                  }
-                                };
-                                annotations.turbidityTargetLine = {
-                                  type: 'line',
-                                  yMin: 1.0,
-                                  yMax: 1.0,
-                                  borderColor: 'rgba(34, 197, 94, 0.8)', // Green for target
-                                  borderWidth: 1.5,
-                                  borderDash: [3, 3],
-                                  label: {
-                                    content: 'Turbidez Target (1.0)',
-                                    enabled: true,
-                                    position: 'center',
-                                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
-                                    color: 'white',
-                                    font: { size: 6 },
-                                    padding: 2
-                                  }
-                                };
-                              }
-                              
-                              return annotations;
-                            })()
                           }
                         }
                       }} />

@@ -305,6 +305,7 @@ export function AdminPage() {
             reportPeriod={{ start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() }}
             onDownloadPDF={handleDownloadA4PDF}
             isGeneratingPDF={isLoading.pdf}
+            clientId={selectedClient}
           />
         )}
 

@@ -153,7 +153,7 @@ export function AdminPage() {
         reportData,
         validCollectionPoints,
         clientInfoForA4,
-        { start: new Date(startDate), end: new Date(endDate) },
+        { start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() },
         intl
       );
       console.log('A4 PDF generation completed successfully');
@@ -302,7 +302,7 @@ export function AdminPage() {
             clientInfo={clientInfoForA4}
             collectionPointsData={validCollectionPoints}
             reportData={reportData}
-            reportPeriod={{ start: new Date(startDate), end: new Date(endDate) }}
+            reportPeriod={{ start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() }}
             onDownloadPDF={handleDownloadA4PDF}
             isGeneratingPDF={isLoading.pdf}
           />
@@ -338,7 +338,7 @@ export function AdminPage() {
                   </h1>
                   <p className="text-blue-100 text-center">
                     {clients.find(c => c.id === selectedClient)?.razao_social} | 
-                    {format(new Date(startDate), 'MMM dd')} - {format(new Date(endDate), 'MMM dd, yyyy')}
+                    {startDate ? format(new Date(startDate), 'MMM dd') : 'Start'} - {endDate ? format(new Date(endDate), 'MMM dd, yyyy') : 'End'}
                   </p>
                 </div>
 

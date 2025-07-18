@@ -36,6 +36,9 @@ interface WaterQualityAnalysisData {
   overallCompliance: number;
   criticalIssues: number;
   warnings: number;
+  uniqueCollectionPoints: number;
+  totalDaysWithMeasurements: number;
+  totalParameters: number;
 }
 
 interface WaterQualityAnalysisReportProps {
@@ -188,6 +191,19 @@ export function WaterQualityAnalysisReport({
       };
     });
 
+    // Calculate real statistics from the analysis data
+    const uniqueCollectionPoints = collectionPoints.length;
+    const totalDaysWithMeasurements = new Set(samples.map(s => s.timestamp.toDateString())).size;
+    const totalParameters = Object.values(analysis.parameterStats).reduce((sum, stat) => 
+      sum + (stat.totalMeasurements > 0 ? 1 : 0), 0
+    );
+    const criticalIssues = Object.values(analysis.parameterStats).reduce((sum, stat) => 
+      sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length, 0
+    );
+    const warnings = Object.values(analysis.parameterStats).reduce((sum, stat) => 
+      sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length, 0
+    );
+
     return {
       reportId: `WQR-${format(new Date(), 'yyyyMMdd-HHmmss')}`,
       generatedAt: new Date(),
@@ -197,14 +213,14 @@ export function WaterQualityAnalysisReport({
       },
       clientName,
       totalMeasurements: analysis.totalSamples,
-      overallCompliance: analysis.complianceRate,
-      criticalIssues: Object.values(analysis.parameterStats).reduce((sum, stat) => 
-        sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length, 0
-      ),
-      warnings: Object.values(analysis.parameterStats).reduce((sum, stat) => 
-        sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length, 0
-      ),
-      collectionPoints
+      overallCompliance: Number(analysis.complianceRate.toFixed(1)),
+      criticalIssues,
+      warnings,
+      collectionPoints,
+      // Add calculated statistics for the summary cards
+      uniqueCollectionPoints,
+      totalDaysWithMeasurements,
+      totalParameters
     };
   };
 
@@ -401,6 +417,36 @@ export function WaterQualityAnalysisReport({
               </div>
 
               {/* Parameters Grid */}
+            <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+              <div className="flex items-center">
+                <Eye className="h-8 w-8 text-purple-600 mr-3" />
+                <div>
+                  <div className="text-2xl font-bold text-purple-900">{data.uniqueCollectionPoints}</div>
+                  <div className="text-sm text-purple-700">Collection Points</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+              <div className="flex items-center">
+                <Calendar className="h-8 w-8 text-indigo-600 mr-3" />
+                <div>
+                  <div className="text-2xl font-bold text-indigo-900">{data.totalDaysWithMeasurements}</div>
+                  <div className="text-sm text-indigo-700">Days with Measurements</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+              <div className="flex items-center">
+                <Beaker className="h-8 w-8 text-teal-600 mr-3" />
+                <div>
+                  <div className="text-2xl font-bold text-teal-900">{data.totalParameters}</div>
+                  <div className="text-sm text-teal-700">Parameters Monitored</div>
+                </div>
+              </div>
+            </div>
+            
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {point.parameters.map((param, index) => (
                   <div key={index} className={`p-4 rounded-lg border ${getStatusColor(param.status)}`}>

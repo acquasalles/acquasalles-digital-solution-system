@@ -93,8 +93,11 @@ export async function fetchWaterQualityData(
       ),
       medicao_items!inner (
         valor,
+        parametro,
         tipo_medicao_nome,
-        parametro
+        tipo_medicao:tipo_medicao_id (
+          nome
+        )
       )
     `)
     .eq('cliente_id', clientId)
@@ -128,7 +131,43 @@ export async function fetchWaterQualityData(
     // Processar cada item de medição
     measurement.medicao_items.forEach(item => {
       const value = parseFloat(item.valor);
-      const parameterType = item.tipo_medicao_nome || item.parametro;
+      
+      // Determinar o tipo de parâmetro baseado em múltiplas fontes
+      let parameterType = item.tipo_medicao_nome || 
+                         item.tipo_medicao?.nome || 
+                         item.parametro;
+      
+      // Se ainda não temos o tipo, tentar determinar pelo valor
+      if (!parameterType) {
+        if (value >= 0 && value <= 14) {
+          parameterType = 'pH';
+        } else if (value >= 0 && value <= 10) {
+          parameterType = 'Cloro';
+        } else if (value >= 0 && value <= 100) {
+          parameterType = 'Turbidez';
+        }
+      }
+      
+      // Normalizar nomes de parâmetros
+      if (parameterType) {
+        parameterType = parameterType.toLowerCase();
+        
+        if (parameterType.includes('ph') || parameterType === 'ph') {
+          parameterType = 'pH';
+        } else if (parameterType.includes('cloro') || parameterType.includes('chlorine')) {
+          parameterType = 'Cloro';
+        } else if (parameterType.includes('turbidez') || parameterType.includes('turbidity')) {
+          parameterType = 'Turbidez';
+        }
+      }
+      
+      console.log('Processing measurement:', {
+        originalType: item.tipo_medicao_nome,
+        tipoMedicaoNome: item.tipo_medicao?.nome,
+        parametro: item.parametro,
+        finalType: parameterType,
+        value: value
+      });
 
       if (parameterType === 'pH') {
         sample.parameters.ph = createWaterQualityParameter(
@@ -162,6 +201,9 @@ export async function fetchWaterQualityData(
     sample.nonComplianceCount = nonCompliantParams.length;
   });
 
+  console.log('Final samples processed:', samplesMap.size);
+  console.log('Sample data preview:', Array.from(samplesMap.values()).slice(0, 2));
+  
   return Array.from(samplesMap.values());
 }
 

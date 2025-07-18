@@ -12,6 +12,7 @@ import { WaterQualityAnalysisReport } from './WaterQualityAnalysisReport';
 import { A4ReportPreview } from './A4ReportPreview';
 import type { ReportData } from '../types/report';
 import { useIntl } from 'react-intl';
+import { WaterQualityComplianceAnalysis } from './WaterQualityComplianceAnalysis';
 import { useAdminData } from '../hooks/useAdminData';
 import {
   Chart as ChartJS,
@@ -43,6 +44,7 @@ export function AdminPage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showWaterQualityReport, setShowWaterQualityReport] = useState(false);
   const [showA4Report, setShowA4Report] = useState(false);
+  const [showComplianceAnalysis, setShowComplianceAnalysis] = useState(false);
   const { user } = useAuth();
   const intl = useIntl();
   
@@ -178,6 +180,9 @@ export function AdminPage() {
     }
   };
 
+  const handleShowComplianceAnalysis = () => {
+    setShowComplianceAnalysis(true);
+  };
   const handleShowA4Report = async () => {
     // Ensure report data is generated before showing A4 preview
     if (!reportData && selectedClient) {
@@ -203,6 +208,9 @@ export function AdminPage() {
     // If other reports are open, close them to avoid confusion
     if (showWaterQualityReport) {
       setShowWaterQualityReport(false);
+    }
+    if (showComplianceAnalysis) {
+      setShowComplianceAnalysis(false);
     }
   };
 
@@ -300,8 +308,17 @@ export function AdminPage() {
           />
         )}
 
+        {/* Show Compliance Analysis */}
+        {showComplianceAnalysis && selectedClient && (
+          <WaterQualityComplianceAnalysis
+            clientId={selectedClient}
+            startDate={startDate}
+            endDate={endDate}
+            onClose={() => setShowComplianceAnalysis(false)}
+          />
+        )}
         {/* Compact 3-Column Grid Report */}
-        {selectedClient && !showA4Report && (
+        {selectedClient && !showA4Report && !showComplianceAnalysis && (
           <div className="space-y-8">
             {isLoading.graph ? (
               <div className="bg-white rounded-lg shadow-md p-8 flex items-center justify-center">
@@ -486,6 +503,15 @@ export function AdminPage() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-end space-x-4">
                   <button
+                    onClick={handleShowComplianceAnalysis}
+                    disabled={isAnyLoading || !selectedClient}
+                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-indigo-300 transition-colors duration-200"
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Análise de Conformidade
+                  </button>
+
+                  <button
                     onClick={handleGenerateWaterQualityReport}
                     disabled={isAnyLoading || !selectedClient}
                     className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-green-300 transition-colors duration-200"
@@ -541,7 +567,7 @@ export function AdminPage() {
           </div>
         )}
 
-        {reportData && Object.keys(reportData).length > 0 && !showA4Report && (
+        {reportData && Object.keys(reportData).length > 0 && !showA4Report && !showComplianceAnalysis && (
           <div className="bg-white rounded-lg shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold">

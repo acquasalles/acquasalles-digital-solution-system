@@ -406,8 +406,7 @@ export function A4ReportPreview({
 
               {/* Client Information Section - Optimized for Landscape */}
               <div className="mb-4">
-                <h2 className="text-base font-semibold text-gray-900 mb-3 flex items-center">
-                  <Building className="h-4 w-4 mr-2" />
+                <h2 className="text-base font-semibold text-gray-900 mb-3">
                   Informações do Cliente
                 </h2>
                 
@@ -416,10 +415,6 @@ export function A4ReportPreview({
                   <div className="bg-gray-50 p-3 rounded-lg">
                     <h3 className="font-semibold text-gray-900 mb-2 text-sm">Dados da Empresa</h3>
                     <div className="space-y-1">
-                      <div>
-                        <span className="font-medium text-gray-700 text-xs">Razão Social:</span>
-                        <div className="text-gray-900 text-xs">{clientInfo.name}</div>
-                      </div>
                       <div>
                         <span className="font-medium text-gray-700 text-xs">CNPJ:</span>
                         <div className="text-gray-900 text-xs">{clientInfo.cnpj}</div>
@@ -433,24 +428,8 @@ export function A4ReportPreview({
                       <div>
                         <span className="font-medium text-gray-700 text-xs">Endereço:</span>
                         <div className="text-gray-900 text-xs">{clientInfo.address}</div>
-                      </div>
-                      <div>
                         <span className="font-medium text-gray-700 text-xs">Cidade:</span>
                         <div className="text-gray-900 text-xs">{clientInfo.city} - {clientInfo.state}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 p-3 rounded-lg">
-                    <h3 className="font-semibold text-gray-900 mb-2 text-sm">Contato</h3>
-                    <div className="space-y-1">
-                      <div>
-                        <span className="font-medium text-gray-700 text-xs">Telefone:</span>
-                        <div className="text-gray-900 text-xs">{clientInfo.phone}</div>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-700 text-xs">E-mail:</span>
-                        <div className="text-gray-900 text-xs">{clientInfo.email}</div>
                       </div>
                     </div>
                   </div>
@@ -617,34 +596,6 @@ export function A4ReportPreview({
                 </div>
               </div>
 
-              {/* Key Metrics - HIDDEN AS REQUESTED */}
-              {false && (
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-green-900 mb-2 text-sm">Parâmetros Monitorados</h4>
-                    <ul className="text-xs text-green-800 space-y-1">
-                      {validCollectionPoints.slice(0, 2).map(point => (
-                        <li key={point.id}>
-                          • <strong>{point.name}:</strong> {point.datasetStats.filter(s => !s.hidden).map(s => s.label).join(', ')}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold text-blue-900 mb-2 text-sm">Estatísticas dos Dados</h4>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      {validCollectionPoints.slice(0, 1).map(point => 
-                        point.datasetStats.filter(s => !s.hidden).slice(0, 3).map(stat => (
-                          <li key={`${point.id}-${stat.label}`}>
-                            • <strong>{stat.label}:</strong> Média {stat.avg} (Min: {stat.min}, Max: {stat.max})
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              )}
-
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
                 <p>Este relatório foi gerado automaticamente pelo Sistema de Monitoramento ACQUASALLES</p>
@@ -681,21 +632,6 @@ export function A4ReportPreview({
                             right: 5
                           }
                         },
-                        plugins: {
-                          ...point.graphOptions?.plugins,
-                          title: { display: false },
-                          legend: { 
-                            display: true,
-                            position: 'bottom' as const,
-                            labels: {
-                              font: { size: 7 },
-                              padding: 3,
-                              usePointStyle: true,
-                              boxWidth: 5,
-                              boxHeight: 5
-                            }
-                          }
-                        },
                         scales: {
                           ...point.graphOptions?.scales,
                           x: {
@@ -712,6 +648,171 @@ export function A4ReportPreview({
                               font: { size: 7 },
                               maxTicksLimit: 5
                             }
+                          }
+                        },
+                        plugins: {
+                          title: { display: false },
+                          legend: { 
+                            display: true,
+                            position: 'bottom' as const,
+                            labels: {
+                              font: { size: 7 },
+                              padding: 3,
+                              usePointStyle: true,
+                              boxWidth: 5,
+                              boxHeight: 5
+                            }
+                          },
+                          annotation: {
+                            annotations: (() => {
+                              const annotations: any = {};
+                              
+                              // Add reference lines based on measurement types in this point
+                              const hasPhMeasurement = point.datasetStats.some(stat => 
+                                stat.label.toLowerCase().includes('ph')
+                              );
+                              const hasChlorineMeasurement = point.datasetStats.some(stat => 
+                                stat.label.toLowerCase().includes('cloro') || 
+                                stat.label.toLowerCase().includes('chlorine')
+                              );
+                              const hasTurbidityMeasurement = point.datasetStats.some(stat => 
+                                stat.label.toLowerCase().includes('turbidez') || 
+                                stat.label.toLowerCase().includes('turbidity')
+                              );
+                              
+                              // pH Reference Lines (6.5 - 8.5 acceptable range)
+                              if (hasPhMeasurement) {
+                                annotations.phMinLine = {
+                                  type: 'line',
+                                  yMin: 6.5,
+                                  yMax: 6.5,
+                                  borderColor: 'rgba(255, 193, 7, 0.8)', // Orange for warning
+                                  borderWidth: 1.5,
+                                  borderDash: [5, 5],
+                                  label: {
+                                    content: 'pH Min (6.5)',
+                                    enabled: true,
+                                    position: 'end',
+                                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                                    color: 'white',
+                                    font: { size: 6 },
+                                    padding: 2
+                                  }
+                                };
+                                annotations.phMaxLine = {
+                                  type: 'line',
+                                  yMin: 8.5,
+                                  yMax: 8.5,
+                                  borderColor: 'rgba(255, 193, 7, 0.8)', // Orange for warning
+                                  borderWidth: 1.5,
+                                  borderDash: [5, 5],
+                                  label: {
+                                    content: 'pH Max (8.5)',
+                                    enabled: true,
+                                    position: 'start',
+                                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                                    color: 'white',
+                                    font: { size: 6 },
+                                    padding: 2
+                                  }
+                                };
+                                annotations.phTargetLine = {
+                                  type: 'line',
+                                  yMin: 7.0,
+                                  yMax: 7.0,
+                                  borderColor: 'rgba(34, 197, 94, 0.8)', // Green for target
+                                  borderWidth: 2,
+                                  borderDash: [3, 3],
+                                  label: {
+                                    content: 'pH Target (7.0)',
+                                    enabled: true,
+                                    position: 'center',
+                                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                                    color: 'white',
+                                    font: { size: 6 },
+                                    padding: 2
+                                  }
+                                };
+                              }
+                              
+                              // Chlorine Reference Lines (0.2 - 2.0 mg/L acceptable range)
+                              if (hasChlorineMeasurement) {
+                                annotations.chlorineMinLine = {
+                                  type: 'line',
+                                  yMin: 0.2,
+                                  yMax: 0.2,
+                                  borderColor: 'rgba(255, 193, 7, 0.8)', // Orange for warning
+                                  borderWidth: 1.5,
+                                  borderDash: [5, 5],
+                                  label: {
+                                    content: 'Cloro Min (0.2)',
+                                    enabled: true,
+                                    position: 'end',
+                                    backgroundColor: 'rgba(255, 193, 7, 0.8)',
+                                    color: 'white',
+                                    font: { size: 6 },
+                                    padding: 2
+                                  }
+                                };
+                                annotations.chlorineMaxLine = {
+                                  type: 'line',
+                                  yMin: 2.0,
+                                  yMax: 2.0,
+                                  borderColor: 'rgba(239, 68, 68, 0.8)', // Red for maximum limit
+                                  borderWidth: 2,
+                                  borderDash: [8, 4],
+                                  label: {
+                                    content: 'Cloro Max (2.0)',
+                                    enabled: true,
+                                    position: 'start',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                    color: 'white',
+                                    font: { size: 6 },
+                                    padding: 2
+                                  }
+                                };
+                              }
+                              
+                              // Turbidity Reference Lines (max 4.0 NTU)
+                              if (hasTurbidityMeasurement) {
+                                annotations.turbidityMaxLine = {
+                                  type: 'line',
+                                  yMin: 4.0,
+                                  yMax: 4.0,
+                                  borderColor: 'rgba(239, 68, 68, 0.8)', // Red for maximum limit
+                                  borderWidth: 2,
+                                  borderDash: [8, 4],
+                                  label: {
+                                    content: 'Turbidez Max (4.0)',
+                                    enabled: true,
+                                    position: 'end',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                    color: 'white',
+                                    font: { size: 6 },
+                                    padding: 2
+                                  }
+                                };
+                                annotations.turbidityTargetLine = {
+                                  type: 'line',
+                                  yMin: 1.0,
+                                  yMax: 1.0,
+                                  borderColor: 'rgba(34, 197, 94, 0.8)', // Green for target
+                                  borderWidth: 1.5,
+                                  borderDash: [3, 3],
+                                  label: {
+                                    content: 'Turbidez Target (1.0)',
+                                    enabled: true,
+                                    position: 'center',
+                                    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+                                    color: 'white',
+                                    font: { size: 6 },
+                                    padding: 2
+                                  }
+                                };
+                              }
+                              
+                              return annotations;
+                            })()
                           }
                         }
                       }} />

@@ -2,6 +2,9 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AlertTriangle, CheckCircle, Clock, Droplets, Beaker, Eye, TrendingUp, TrendingDown, Minus, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { useIntl } from 'react-intl';
+import { fetchWaterQualityData, generateComplianceAnalysis, COMPLIANCE_LIMITS } from '../lib/waterQualityCompliance';
+import type { WaterQualitySample, ComplianceAnalysis } from '../types/waterQuality';
+import { useClients } from '../lib/ClientsContext';
 
 interface WaterQualityParameter {
   name: string;
@@ -59,13 +62,37 @@ export function WaterQualityAnalysisReport({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { clients } = useClients();
+  const [samples, setSamples] = useState<WaterQualitySample[]>([]);
+  const [analysis, setAnalysis] = useState<ComplianceAnalysis | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { clients } = useClients();
   const intl = useIntl();
 
   useEffect(() => {
     if (isVisible && clientId && startDate && endDate) {
       loadWaterQualityData();
-    }
   }, [isVisible, clientId, startDate, endDate]);
+
+  const loadWaterQualityData = async () => {
+    if (!clientId || !startDate || !endDate) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const waterQualityData = await fetchWaterQualityData(clientId, startDate, endDate);
+      setSamples(waterQualityData);
+      
+      const complianceAnalysis = generateComplianceAnalysis(waterQualityData);
+      setAnalysis(complianceAnalysis);
+    } catch (err) {
+      console.error('Erro ao carregar dados de qualidade da água:', err);
+      setError('Erro ao carregar dados de qualidade da água');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const loadWaterQualityData = async () => {
     if (!clientId || !startDate || !endDate) return;
@@ -186,6 +213,104 @@ export function WaterQualityAnalysisReport({
         parameters,
         overallStatus: overallCompliance > 0.9 ? 'compliant' : overallCompliance > 0.7 ? 'warning' : 'non-compliant',
         complianceScore: Number((overallCompliance * 100).toFixed(1))
+  const transformAnalysisData = (analysis: ComplianceAnalysis): WaterQualityAnalysisData => {
+    const selectedClient = clients.find(c => c.id === clientId);
+    const clientName = selectedClient?.razao_social || 'Cliente';
+    
+    // Group samples by collection point
+    const pointsMap = new Map<string, {
+      pointId: string;
+      pointName: string;
+      areaName: string;
+      lastMeasurement: Date;
+      parameters: WaterQualityParameter[];
+      samples: WaterQualitySample[];
+    }>();
+
+    samples.forEach(sample => {
+      const key = `${sample.collectionPointId}-${sample.collectionPointName}`;
+      
+      if (!pointsMap.has(key)) {
+        pointsMap.set(key, {
+          pointId: sample.collectionPointId,
+          pointName: sample.collectionPointName,
+          areaName: sample.areaName,
+          lastMeasurement: sample.timestamp,
+          parameters: [],
+          samples: []
+        });
+      }
+      
+      const point = pointsMap.get(key)!;
+      point.samples.push(sample);
+      
+      // Update last measurement if this sample is more recent
+      if (sample.timestamp > point.lastMeasurement) {
+        point.lastMeasurement = sample.timestamp;
+      }
+    });
+
+    // Convert to collection point analysis format
+    const collectionPoints: CollectionPointAnalysis[] = Array.from(pointsMap.values()).map(point => {
+      const parameters: WaterQualityParameter[] = [];
+      
+      // Calculate average values and status for each parameter
+      const phValues = point.samples.map(s => s.parameters.ph).filter(Boolean);
+      const chlorineValues = point.samples.map(s => s.parameters.chlorine).filter(Boolean);
+      const turbidityValues = point.samples.map(s => s.parameters.turbidity).filter(Boolean);
+      
+      if (phValues.length > 0) {
+        const avgValue = phValues.reduce((sum, p) => sum + p!.value, 0) / phValues.length;
+        const compliantCount = phValues.filter(p => p!.isCompliant).length;
+        parameters.push({
+          name: 'pH',
+          value: Number(avgValue.toFixed(2)),
+          unit: '',
+          normalRange: COMPLIANCE_LIMITS.ph,
+          status: compliantCount / phValues.length > 0.8 ? 'normal' : 'warning',
+          trend: 'stable',
+          icon: <Beaker className="h-4 w-4" />
+        });
+      }
+      
+      if (chlorineValues.length > 0) {
+        const avgValue = chlorineValues.reduce((sum, p) => sum + p!.value, 0) / chlorineValues.length;
+        const compliantCount = chlorineValues.filter(p => p!.isCompliant).length;
+        parameters.push({
+          name: 'Cloro Residual',
+          value: Number(avgValue.toFixed(2)),
+          unit: 'mg/L',
+          normalRange: { min: 0, max: COMPLIANCE_LIMITS.chlorine.max },
+          status: compliantCount / chlorineValues.length > 0.8 ? 'normal' : 'warning',
+          trend: 'stable',
+          icon: <Droplets className="h-4 w-4" />
+        });
+      }
+      
+      if (turbidityValues.length > 0) {
+        const avgValue = turbidityValues.reduce((sum, p) => sum + p!.value, 0) / turbidityValues.length;
+        const compliantCount = turbidityValues.filter(p => p!.isCompliant).length;
+        parameters.push({
+          name: 'Turbidez',
+          value: Number(avgValue.toFixed(2)),
+          unit: 'NTU',
+          normalRange: { min: 0, max: COMPLIANCE_LIMITS.turbidity.max },
+          status: compliantCount / turbidityValues.length > 0.8 ? 'normal' : 'warning',
+          trend: 'stable',
+          icon: <Eye className="h-4 w-4" />
+        });
+      }
+      
+      const overallCompliance = point.samples.filter(s => s.overallCompliance).length / point.samples.length;
+      
+      return {
+        pointId: point.pointId,
+        pointName: point.pointName,
+        areaName: point.areaName,
+        lastMeasurement: point.lastMeasurement,
+        parameters,
+        overallStatus: overallCompliance > 0.9 ? 'compliant' : overallCompliance > 0.7 ? 'warning' : 'non-compliant',
+        complianceScore: Number((overallCompliance * 100).toFixed(1))
       };
     });
 
@@ -206,7 +331,25 @@ export function WaterQualityAnalysisReport({
         sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length, 0
       ),
       collectionPoints
-    };
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!analysis) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 mt-6">
+        <div className="p-8 text-center">
+          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum Dado Encontrado</h3>
+          <p className="text-gray-600">Não foram encontrados dados de qualidade da água para o período selecionado.</p>
+        </div>
+      </div>
+    );
+  }
+
   };
 
   if (!isVisible) return null;
@@ -248,7 +391,7 @@ export function WaterQualityAnalysisReport({
     return (
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 mt-6">
         <div className="p-8 text-center">
-          <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <Eye className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum Dado Encontrado</h3>
           <p className="text-gray-600">Não foram encontrados dados de qualidade da água para o período selecionado.</p>
         </div>
@@ -300,8 +443,6 @@ export function WaterQualityAnalysisReport({
         return null;
     }
   };
-
-  if (!isVisible) return null;
 
   return (
     <div className="bg-white rounded-lg shadow-lg border border-gray-200 mt-6">

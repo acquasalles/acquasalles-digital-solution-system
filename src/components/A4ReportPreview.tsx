@@ -406,6 +406,7 @@ export function A4ReportPreview({
 
               {/* Client Information Section - Optimized for Landscape */}
               <div className="mb-4">
+                <h2 className="text-base font-semibold text-gray-900 mb-3">
                   Informações do Cliente
                 </h2>
                 
@@ -481,10 +482,8 @@ export function A4ReportPreview({
                   <h4 className="font-semibold text-red-900 mb-2 text-sm flex items-center">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
-                    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
-                    
-                  </h3>
-                    <FileText className="h-8 w-8 text-indigo-600 mr-3" />
+                  </h4>
+                  {(() => {
                     const allNonCompliantValues: Array<{
                       date: string;
                       pointName: string;
@@ -593,76 +592,9 @@ export function A4ReportPreview({
                     <span className="text-green-600 font-medium">✓ Usando dados reais da análise de conformidade</span>
                   ) : (
                     <span className="text-orange-600 font-medium">⚠ Usando dados estimados (carregando dados reais...)</span>
-                  })()}
-                  </div>
-                </div>
-              )}
-
-              {/* Loading indicator for real data */}
-              {isLoadingAnalysis && (
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                  <div className="flex items-center">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 mr-2" />
-                    <span className="text-sm text-blue-700">Carregando dados reais de qualidade da água...</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Real data summary */}
-              {realAnalysis && (
-                <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-4">
-                  <h4 className="font-semibold text-green-900 mb-2 text-sm">Dados Reais Carregados</h4>
-                  <div className="grid grid-cols-3 gap-2 text-xs text-green-800">
-                    <div>Total de Amostras: <strong>{realAnalysis.totalSamples}</strong></div>
-                    <div>Taxa de Conformidade: <strong>{realAnalysis.complianceRate.toFixed(1)}%</strong></div>
-                    <div>Parâmetros Monitorados: <strong>{realStats.totalParameters}</strong></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Show data source indicator */}
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                <div className="text-xs text-gray-600 text-center">
-                  {realAnalysis ? (
-                    <span className="text-green-600 font-medium">✓ Usando dados reais da análise de conformidade</span>
-                  ) : (
-                    <span className="text-orange-600 font-medium">⚠ Usando dados estimados (carregando dados reais...)</span>
                   )}
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* Chart Pages - Using real collection points data */}
-          {currentPage > 1 && currentPage <= 1 + totalChartPages && (
-
-              {/* Key Metrics - HIDDEN AS REQUESTED */}
-              {false && (
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                    <h4 className="font-semibold text-green-900 mb-2 text-sm">Parâmetros Monitorados</h4>
-                    <ul className="text-xs text-green-800 space-y-1">
-                      {validCollectionPoints.slice(0, 2).map(point => (
-                        <li key={point.id}>
-                          • <strong>{point.name}:</strong> {point.datasetStats.filter(s => !s.hidden).map(s => s.label).join(', ')}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold text-blue-900 mb-2 text-sm">Estatísticas dos Dados</h4>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      {validCollectionPoints.slice(0, 1).map(point => 
-                        point.datasetStats.filter(s => !s.hidden).slice(0, 3).map(stat => (
-                          <li key={`${point.id}-${stat.label}`}>
-                            • <strong>{stat.label}:</strong> Média {stat.avg} (Min: {stat.min}, Max: {stat.max})
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                  </div>
-                </div>
-              )}
 
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">

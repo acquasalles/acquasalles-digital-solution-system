@@ -156,10 +156,16 @@ export async function fetchWaterQualityData(
 
     // Calcular conformidade geral da amostra
     const parameters = Object.values(sample.parameters).filter(Boolean);
-    const nonCompliantParams = parameters.filter(p => !p.isCompliant);
     
-    sample.overallCompliance = nonCompliantParams.length === 0;
-    sample.nonComplianceCount = nonCompliantParams.length;
+    if (parameters.length === 0) {
+      // Se não há parâmetros válidos, marcar como N/A
+      sample.overallCompliance = null; // null indica N/A
+      sample.nonComplianceCount = 0;
+    } else {
+      const nonCompliantParams = parameters.filter(p => !p.isCompliant);
+      sample.overallCompliance = nonCompliantParams.length === 0;
+      sample.nonComplianceCount = nonCompliantParams.length;
+    }
   });
 
   return Array.from(samplesMap.values());
@@ -167,7 +173,7 @@ export async function fetchWaterQualityData(
 
 export function generateComplianceAnalysis(samples: WaterQualitySample[]): ComplianceAnalysis {
   const totalSamples = samples.length;
-  const compliantSamples = samples.filter(s => s.overallCompliance).length;
+  const compliantSamples = samples.filter(s => s.overallCompliance === true).length;
   const nonCompliantSamples = totalSamples - compliantSamples;
   const complianceRate = totalSamples > 0 ? (compliantSamples / totalSamples) * 100 : 0;
 

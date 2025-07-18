@@ -406,7 +406,6 @@ export function A4ReportPreview({
 
               {/* Client Information Section - Optimized for Landscape */}
               <div className="mb-4">
-                <h2 className="text-base font-semibold text-gray-900 mb-3">
                   Informações do Cliente
                 </h2>
                 
@@ -482,9 +481,14 @@ export function A4ReportPreview({
                   <h4 className="font-semibold text-red-900 mb-2 text-sm flex items-center">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
-                  </h4>
-                  {(() => {
-                    const allNonCompliantValues = [];
+                    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
+            { label: 'Taxa Conformidade', value: realAnalysis?.complianceRate.toFixed(1) + '%' || '0%' },
+            { label: 'Não Conformidades', value: realAnalysis ? Object.values(realAnalysis.parameterStats).reduce((sum, stat) => sum + stat.nonCompliantValues.length, 0).toString() : '0' }
+                  </div>
+                  <div className="text-sm text-red-700">Não Conformidades</div>
+                </div>
+              </div>
+            </div>
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
                       const parameterName = key === 'ph' ? 'pH' : key === 'chlorine' ? 'Cloro Residual' : 'Turbidez';
                       const unit = key === 'ph' ? '' : key === 'chlorine' ? 'mg/L' : 'NTU';
@@ -552,6 +556,7 @@ export function A4ReportPreview({
                       </div>
                     );
                   })()}
+                  </div>
                 </div>
               )}
 

@@ -436,6 +436,17 @@ export function A4ReportPreview({
                     </div>
                   </div>
 
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <h3 className="font-semibold text-gray-900 mb-2 flex items-center text-sm">
+                      <Phone className="h-3 w-3 mr-1" />
+                      Contato
+                    </h3>
+                    <div className="space-y-1 text-gray-900 text-xs">
+                      <div>{clientInfo.phone}</div>
+                      <div>{clientInfo.email}</div>
+                      <div className="font-medium">{clientInfo.contact}</div>
+                    </div>
+                  </div>
 
                   <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                     <h3 className="font-semibold text-blue-900 mb-2 flex items-center text-sm">
@@ -485,7 +496,7 @@ export function A4ReportPreview({
                   <h4 className="font-semibold text-red-900 mb-2 text-sm flex items-center">
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Ocorrências de Não Conformidades
-                    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
+                  </h4>
                   {(() => {
                     const allNonCompliantValues = [];
                     Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
@@ -555,7 +566,6 @@ export function A4ReportPreview({
                       </div>
                     );
                   })()}
-                  </div>
                 </div>
               )}
 

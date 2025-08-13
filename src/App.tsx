@@ -6,6 +6,7 @@ import { SignUpPage } from './components/SignUpPage';
 import { AdminPage } from './components/AdminPage';
 import { DashboardPage } from './components/DashboardPage';
 import { ClientUsersPage } from './components/ClientUsersPage';
+import { AreasDeTrabalhoPage } from './components/AreasDeTrabalhoPage';
 import { WaterQualityReportDemo } from './components/WaterQualityReportDemo';
 import { ClientsProvider } from './lib/ClientsContext';
 import { IntlProvider } from './i18n/IntlProvider';
@@ -54,6 +55,14 @@ function App() {
                 element={
                   <ProtectedRoute requireAdmin>
                     <ClientUsersPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/cadastros/areas-de-trabalho"
+                element={
+                  <ProtectedRoute requireAdmin>
+                    <AreasDeTrabalhoPage />
                   </ProtectedRoute>
                 }
               />

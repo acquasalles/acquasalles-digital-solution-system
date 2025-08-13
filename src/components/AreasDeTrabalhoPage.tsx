@@ -427,6 +427,16 @@ export function AreasDeTrabalhoPage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Criação/Edição de Área */}
+      <AreaFormModal
+        isOpen={showAreaModal}
+        onClose={() => setShowAreaModal(false)}
+        onSave={handleSaveArea}
+        areaData={editingArea}
+        selectedClientId={selectedClient}
+        clients={clients}
+      />
     </div>
   );
 }

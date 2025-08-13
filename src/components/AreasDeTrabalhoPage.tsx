@@ -17,7 +17,7 @@ interface PontoDeColeta {
   id: string;
   nome: string;
   descricao?: string;
-  tipos_medicao?: string[];
+  tipos_medicao_names?: string[];
 }
 
 export function AreasDeTrabalhoPage() {
@@ -95,7 +95,8 @@ export function AreasDeTrabalhoPage() {
     try {
       const supabase = getSupabase();
       
-      const { data, error } = await supabase
+      // Primeiro buscar os pontos de coleta com seus tipos_medicao (IDs)
+      const { data: pontosData, error: pontosError } = await supabase
         .from('ponto_de_coleta')
         .select(`
           id,
@@ -106,8 +107,31 @@ export function AreasDeTrabalhoPage() {
         .eq('area_de_trabalho_id', areaId)
         .order('nome', { ascending: true });
 
-      if (error) throw error;
-      setExpandedAreaPoints(data || []);
+      if (pontosError) throw pontosError;
+
+      // Buscar todos os tipos de medição para mapear IDs para nomes
+      const { data: tiposData, error: tiposError } = await supabase
+        .from('tipos_medicao')
+        .select('id, nome');
+
+      if (tiposError) throw tiposError;
+
+      // Criar mapa de ID -> nome
+      const tiposMap = new Map(
+        (tiposData || []).map(tipo => [tipo.id, tipo.nome])
+      );
+
+      // Mapear os pontos com os nomes dos tipos de medição
+      const pontosComNomes = (pontosData || []).map(ponto => ({
+        id: ponto.id,
+        nome: ponto.nome,
+        descricao: ponto.descricao,
+        tipos_medicao_names: (ponto.tipos_medicao || []).map((tipoId: string) => 
+          tiposMap.get(tipoId) || tipoId
+        )
+      }));
+
+      setExpandedAreaPoints(pontosComNomes);
     } catch (error) {
       console.error('Erro ao buscar pontos de coleta:', error);
       setError('Erro ao carregar pontos de coleta');
@@ -312,21 +336,9 @@ export function AreasDeTrabalhoPage() {
                                         {ponto.descricao && (
                                           <p className="text-xs text-gray-500 mt-1">{ponto.descricao}</p>
                                         )}
-                                        {ponto.tipos_medicao && ponto.tipos_medicao.length > 0 && (
+                                        {ponto.tipos_medicao_names && ponto.tipos_medicao_names.length > 0 && (
                                           <div className="flex flex-wrap gap-1 mt-2">
-                                            {ponto.tipos_medicao.map((tipo, index) => (
-                                              <span
-                                                key={index}
-                                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                                              >
-                                                {tipo}
-                                              </span>
-                                            ))}
-                                          </div>
-                                        )}
-                                        {ponto.tipos_medicao && ponto.tipos_medicao.length > 0 && (
-                                          <div className="flex flex-wrap gap-1 mt-2">
-                                            {ponto.tipos_medicao.map((tipo, index) => (
+                                            {ponto.tipos_medicao_names.map((tipo, index) => (
                                               <span
                                                 key={index}
                                                 className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"

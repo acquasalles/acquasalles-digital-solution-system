@@ -4,7 +4,6 @@ import AuthProvider, { useAuth } from './components/AuthProvider';
 import { LoginPage } from './components/LoginPage';
 import { SignUpPage } from './components/SignUpPage';
 import { AdminPage } from './components/AdminPage';
-import { DashboardPage } from './components/DashboardPage';
 import { ClientUsersPage } from './components/ClientUsersPage';
 import { AreasDeTrabalhoPage } from './components/AreasDeTrabalhoPage';
 import { WaterQualityReportDemo } from './components/WaterQualityReportDemo';
@@ -39,14 +38,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <AdminPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
                   </ProtectedRoute>
                 }
               />

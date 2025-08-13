@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
-import { Loader2, UserPlus, Trash2 } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, Shield, User as UserIcon, Crown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useIntl } from 'react-intl';
@@ -9,6 +9,8 @@ import { useIntl } from 'react-intl';
 interface User {
   id: string;
   email: string;
+  is_admin: boolean;
+  role_display: string;
 }
 
 interface Client {
@@ -22,6 +24,7 @@ interface ClientUser {
   client_id: string;
   user_email: string;
   client_name: string;
+  user_is_admin: boolean;
 }
 
 export function ClientUsersPage() {
@@ -31,6 +34,7 @@ export function ClientUsersPage() {
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [loading, setLoading] = useState(false);
+  const [roleLoading, setRoleLoading] = useState<string | null>(null);
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const intl = useIntl();
@@ -54,9 +58,10 @@ export function ClientUsersPage() {
     setLoading(true);
     try {
       const supabase = getSupabase();
-      // Fetch users through RPC
+      
+      // Fetch users with role information
       const { data: usersData, error: usersError } = await supabase
-        .rpc('get_users_list');
+        .rpc('get_users_with_roles');
       
       if (usersError) throw usersError;
       
@@ -67,7 +72,7 @@ export function ClientUsersPage() {
       
       if (clientsError) throw clientsError;
 
-      // Fetch client users with client details
+      // Fetch client users with all details
       const { data: clientUsersData, error: clientUsersError } = await supabase
         .from('client_users')
         .select(`
@@ -79,27 +84,36 @@ export function ClientUsersPage() {
 
       if (clientUsersError) throw clientUsersError;
 
-      // Get user emails for the client users
-      const userIds = clientUsersData?.map(cu => cu.user_id) || [];
+      // Get user details for the client users
       const userEmailMap = new Map(
-        (usersData || []).map(u => [u.id, u.email])
+        (usersData || []).map(u => [u.id, { email: u.email, is_admin: u.is_admin }])
       );
 
-      setUsers(usersData || []);
+      setUsers((usersData || []).map(u => ({
+        id: u.id,
+        email: u.email,
+        is_admin: u.is_admin,
+        role_display: u.is_admin ? 'Administrador' : 'Usuário'
+      })));
+      
       setClients(clientsData || []);
 
       setClientUsers(
-        (clientUsersData || []).map((cu: any) => ({
-          id: cu.id,
-          user_id: cu.user_id,
-          client_id: cu.client_id,
-          user_email: userEmailMap.get(cu.user_id) || 'Unknown',
-          client_name: cu.clientes.razao_social
-        }))
+        (clientUsersData || []).map((cu: any) => {
+          const userInfo = userEmailMap.get(cu.user_id);
+          return {
+            id: cu.id,
+            user_id: cu.user_id,
+            client_id: cu.client_id,
+            user_email: userInfo?.email || 'Unknown',
+            user_is_admin: userInfo?.is_admin || false,
+            client_name: cu.clientes.razao_social
+          };
+        })
       );
     } catch (error) {
       console.error('Error fetching data:', error);
-      alert('Error fetching data');
+      alert(intl.formatMessage({ id: 'clientUsers.error.fetch' }));
     } finally {
       setLoading(false);
     }
@@ -107,7 +121,7 @@ export function ClientUsersPage() {
 
   const handleAssign = async () => {
     if (!selectedUser || !selectedClient) {
-      alert(intl.formatMessage({ id: 'clientUsers.fillFields' }));
+      alert('Por favor, preencha todos os campos');
       return;
     }
 
@@ -159,7 +173,54 @@ export function ClientUsersPage() {
     }
   };
 
-  if (loading) {
+  const handleRoleChange = async (userId: string, newRole: boolean) => {
+    const roleText = newRole ? 'administrador' : 'usuário';
+    if (!confirm(`Tem certeza que deseja alterar este usuário para ${roleText}?`)) return;
+
+    setRoleLoading(userId);
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .rpc('update_user_role', { 
+          target_user_id: userId, 
+          new_role: newRole 
+        });
+
+      if (error) throw error;
+
+      await fetchData();
+      alert(`Role alterada para ${roleText} com sucesso!`);
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      alert('Erro ao alterar role do usuário');
+    } finally {
+      setRoleLoading(null);
+    }
+  };
+
+  const getRoleIcon = (isAdmin: boolean) => {
+    return isAdmin ? (
+      <Crown className="h-4 w-4 text-yellow-600" />
+    ) : (
+      <UserIcon className="h-4 w-4 text-blue-600" />
+    );
+  };
+
+  const getRoleBadge = (isAdmin: boolean) => {
+    return isAdmin ? (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 border border-yellow-200">
+        <Crown className="h-3 w-3 mr-1" />
+        Admin
+      </span>
+    ) : (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+        <UserIcon className="h-3 w-3 mr-1" />
+        Usuário
+      </span>
+    );
+  };
+
+  if (loading && users.length === 0) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="flex items-center space-x-2">
@@ -177,6 +238,76 @@ export function ClientUsersPage() {
       <Navigation />
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        {/* Gestão de Usuários e Roles */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 className="text-2xl font-bold mb-6 flex items-center">
+            <Shield className="h-6 w-6 mr-2 text-blue-600" />
+            Gestão de Usuários e Roles
+          </h2>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email do Usuário
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role Atual
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Alterar Role
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {users.map((userItem) => (
+                  <tr key={userItem.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getRoleIcon(userItem.is_admin)}
+                        <span className="ml-2 text-sm text-gray-900">{userItem.email}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {getRoleBadge(userItem.is_admin)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {roleLoading === userItem.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600 mx-auto" />
+                      ) : (
+                        <div className="flex items-center justify-center space-x-2">
+                          {!userItem.is_admin && (
+                            <button
+                              onClick={() => handleRoleChange(userItem.id, true)}
+                              className="inline-flex items-center px-2 py-1 border border-yellow-300 rounded text-xs font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100"
+                              title="Promover a Admin"
+                            >
+                              <Crown className="h-3 w-3 mr-1" />
+                              Admin
+                            </button>
+                          )}
+                          {userItem.is_admin && (
+                            <button
+                              onClick={() => handleRoleChange(userItem.id, false)}
+                              className="inline-flex items-center px-2 py-1 border border-blue-300 rounded text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100"
+                              title="Rebaixar para Usuário"
+                            >
+                              <UserIcon className="h-3 w-3 mr-1" />
+                              Usuário
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Atribuição de Clientes */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-2xl font-bold mb-6">
             {intl.formatMessage({ id: 'clientUsers.title' })}
@@ -195,9 +326,9 @@ export function ClientUsersPage() {
                 <option value="">
                   {intl.formatMessage({ id: 'clientUsers.selectUser' })}
                 </option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.email}
+                {users.map((userItem) => (
+                  <option key={userItem.id} value={userItem.id}>
+                    {userItem.email} ({userItem.role_display})
                   </option>
                 ))}
               </select>
@@ -243,6 +374,7 @@ export function ClientUsersPage() {
           </button>
         </div>
 
+        {/* Atribuições Atuais */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-2xl font-bold mb-6">
             {intl.formatMessage({ id: 'clientUsers.currentAssignments' })}
@@ -255,6 +387,9 @@ export function ClientUsersPage() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {intl.formatMessage({ id: 'clientUsers.user' })}
                   </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Role
+                  </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {intl.formatMessage({ id: 'clientUsers.client' })}
                   </th>
@@ -265,9 +400,15 @@ export function ClientUsersPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {clientUsers.map((cu) => (
-                  <tr key={cu.id}>
+                  <tr key={cu.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{cu.user_email}</div>
+                      <div className="flex items-center">
+                        {getRoleIcon(cu.user_is_admin)}
+                        <span className="ml-2 text-sm text-gray-900">{cu.user_email}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      {getRoleBadge(cu.user_is_admin)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{cu.client_name}</div>
@@ -275,7 +416,8 @@ export function ClientUsersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <button
                         onClick={() => handleRemove(cu.id)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-600 hover:text-red-900 p-1"
+                        title="Remover Atribuição"
                       >
                         <Trash2 className="h-5 w-5" />
                       </button>
@@ -284,7 +426,7 @@ export function ClientUsersPage() {
                 ))}
                 {clientUsers.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
                       {intl.formatMessage({ id: 'clientUsers.noAssignments' })}
                     </td>
                   </tr>

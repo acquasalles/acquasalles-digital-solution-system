@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
 import { Loader2, MapPin, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
@@ -62,7 +63,7 @@ export function AreasDeTrabalhoPage() {
     }
   }, [selectedClient]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!selectedClient) return;
     
     setLoading(true);
@@ -103,7 +104,7 @@ export function AreasDeTrabalhoPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedClient]);
 
   const fetchPontosDeColeta = async (areaId: string) => {
     setLoadingPoints(true);
@@ -167,10 +168,10 @@ export function AreasDeTrabalhoPage() {
     setShowAreaModal(true);
   };
 
-  const handleSaveArea = () => {
+  const handleSaveArea = useCallback(() => {
     console.log('Saving area');
     fetchData();
-  };
+  }, [fetchData]);
 
   const handleRowClick = async (areaId: string) => {
     if (expandedAreaId === areaId) {

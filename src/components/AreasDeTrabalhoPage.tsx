@@ -154,6 +154,24 @@ export function AreasDeTrabalhoPage() {
       setLoadingPoints(false);
     }
   };
+
+  const handleOpenCreateAreaModal = () => {
+    console.log('Opening create modal');
+    setEditingArea(null);
+    setShowAreaModal(true);
+  };
+
+  const handleOpenEditAreaModal = (area: AreaDeTrabalho) => {
+    console.log('Opening edit modal for:', area);
+    setEditingArea(area);
+    setShowAreaModal(true);
+  };
+
+  const handleSaveArea = () => {
+    console.log('Saving area');
+    fetchData();
+  };
+
   const handleRowClick = async (areaId: string) => {
     if (expandedAreaId === areaId) {
       // Recolher se já estiver expandida
@@ -188,16 +206,6 @@ export function AreasDeTrabalhoPage() {
     }
   };
 
-  const handleSaveArea = () => {
-    fetchData();
-    setShowAreaModal(false);
-  };
-
-  const handleOpenEditAreaModal = (area: AreaDeTrabalho) => {
-    setEditingArea(area);
-    setShowAreaModal(true);
-  };
-
   if (loading && areas.length === 0) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -230,7 +238,7 @@ export function AreasDeTrabalhoPage() {
               </p>
             </div>
             <button
-              onClick={() => {/* TODO: Implementar modal de criação */}}
+              onClick={handleOpenCreateAreaModal}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
             >
               <Plus className="h-4 w-4 mr-2" />

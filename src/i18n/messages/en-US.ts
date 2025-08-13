@@ -72,6 +72,12 @@ export default {
   'clientUsers.error.fetch': 'Error fetching data',
   'clientUsers.confirmRemove': 'Are you sure you want to remove this assignment?',
   'clientUsers.alreadyAssigned': 'This user is already assigned to this client',
+  'clientUsers.roleManagement': 'Role Management',
+  'clientUsers.promoteUser': 'Promote to Admin',
+  'clientUsers.demoteUser': 'Demote to User',
+  'clientUsers.cannotModifyOwnRole': 'Cannot modify your own role',
+  'clientUsers.roleUpdated': 'Role updated successfully',
+  'clientUsers.currentRole': 'Current Role',
 
   // Image Modal
   'imageModal.notAvailable': 'Image not available'

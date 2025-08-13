@@ -224,6 +224,9 @@ export function PontoDeColetaFormModal({
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 Tipos de Medição
               </label>
+              <p className="mt-1 text-sm text-gray-500">
+                Selecione os tipos de medição que serão coletados neste ponto
+              </p>
               <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3 bg-gray-50">
                 {availableTiposMedicao.length > 0 ? (
                   <div className="space-y-2">
@@ -250,9 +253,7 @@ export function PontoDeColetaFormModal({
                   <p className="text-sm text-gray-500">Carregando tipos de medição...</p>
                 )}
               </div>
-              <p className="mt-1 text-sm text-gray-500">
-                Selecione os tipos de medição que serão coletados neste ponto
-              </p>
+              
             </div>
 
             <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">

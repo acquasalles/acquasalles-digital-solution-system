@@ -195,7 +195,7 @@ export function PontoDeColetaFormModal({
                 id="descricaoPonto"
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
-                rows={3}
+                rows={1}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Descrição detalhada do ponto de coleta"
                 disabled={loading}
@@ -210,7 +210,7 @@ export function PontoDeColetaFormModal({
                 id="localizacaoPonto"
                 value={localizacao}
                 onChange={(e) => setLocalizacao(e.target.value)}
-                rows={4}
+                rows={1}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                 placeholder='Exemplo: {"latitude": -23.5505, "longitude": -46.6333}'
                 disabled={loading}

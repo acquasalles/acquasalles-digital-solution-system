@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
-import { Loader2, MapPin, Plus, Pencil, Trash2, Search } from 'lucide-react';
+import { Loader2, MapPin, Plus, Pencil, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useClients } from '../lib/ClientsContext';
@@ -10,7 +10,6 @@ interface AreaDeTrabalho {
   id: string;
   nome_area: string;
   cliente_id: string;
-  cliente_nome?: string;
   localizacao?: any;
   descricao?: string;
   observacao?: string;
@@ -19,8 +18,7 @@ interface AreaDeTrabalho {
 
 export function AreasDeTrabalhoPage() {
   const [areas, setAreas] = useState<AreaDeTrabalho[]>([]);
-  const [filteredAreas, setFilteredAreas] = useState<AreaDeTrabalho[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClient, setSelectedClient] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user, isAdmin } = useAuth();
@@ -38,20 +36,20 @@ export function AreasDeTrabalhoPage() {
       return;
     }
 
-    fetchData();
     fetchClients();
   }, [user, isAdmin, navigate]);
 
   useEffect(() => {
-    const filtered = areas.filter(area =>
-      area.nome_area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      area.cliente_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      area.descricao?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredAreas(filtered);
-  }, [areas, searchTerm]);
+    if (selectedClient) {
+      fetchData();
+    } else {
+      setAreas([]);
+    }
+  }, [selectedClient]);
 
   const fetchData = async () => {
+    if (!selectedClient) return;
+    
     setLoading(true);
     try {
       const supabase = getSupabase();
@@ -61,23 +59,17 @@ export function AreasDeTrabalhoPage() {
         .select(`
           id,
           nome_area,
-          cliente_id,
           localizacao,
           descricao,
           observacao,
-          created_at,
-          clientes!area_de_trabalho_cliente_id_fkey(razao_social)
+          created_at
         `)
+        .eq('cliente_id', selectedClient)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const areasWithClientNames = data?.map(area => ({
-        ...area,
-        cliente_nome: area.clientes?.razao_social || 'Cliente não encontrado'
-      })) || [];
-
-      setAreas(areasWithClientNames);
+      setAreas(data || []);
     } catch (error) {
       console.error('Erro ao buscar áreas de trabalho:', error);
       setError('Erro ao carregar áreas de trabalho');
@@ -148,18 +140,23 @@ export function AreasDeTrabalhoPage() {
             </button>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder="Pesquisar áreas de trabalho..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
+          {/* Client Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Selecione um Cliente
+            </label>
+            <select
+              value={selectedClient}
+              onChange={(e) => setSelectedClient(e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Selecione um cliente...</option>
+              {clients.map((client) => (
+                <option key={client.id} value={client.id}>
+                  {client.razao_social} - {client.cidade}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -179,9 +176,6 @@ export function AreasDeTrabalhoPage() {
                     Nome da Área
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Cliente
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Descrição
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -193,7 +187,7 @@ export function AreasDeTrabalhoPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredAreas.map((area) => (
+                {areas.map((area) => (
                   <tr key={area.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
@@ -209,9 +203,6 @@ export function AreasDeTrabalhoPage() {
                           )}
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{area.cliente_nome}</div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">
@@ -242,10 +233,17 @@ export function AreasDeTrabalhoPage() {
                     </td>
                   </tr>
                 ))}
-                {filteredAreas.length === 0 && !loading && (
+                {areas.length === 0 && !loading && selectedClient && (
                   <tr>
-                    <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
-                      {searchTerm ? 'Nenhuma área encontrada' : 'Nenhuma área de trabalho cadastrada'}
+                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                      Nenhuma área de trabalho cadastrada para este cliente
+                    </td>
+                  </tr>
+                )}
+                {!selectedClient && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                      Selecione um cliente para visualizar as áreas de trabalho
                     </td>
                   </tr>
                 )}
@@ -260,19 +258,19 @@ export function AreasDeTrabalhoPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="text-2xl font-bold text-blue-900">{areas.length}</div>
-              <div className="text-sm text-blue-700">Total de Áreas</div>
+              <div className="text-sm text-blue-700">Áreas do Cliente</div>
             </div>
             <div className="bg-green-50 p-4 rounded-lg">
               <div className="text-2xl font-bold text-green-900">
-                {new Set(areas.map(a => a.cliente_id)).size}
+                {clients.length}
               </div>
-              <div className="text-sm text-green-700">Clientes Ativos</div>
+              <div className="text-sm text-green-700">Total de Clientes</div>
             </div>
             <div className="bg-purple-50 p-4 rounded-lg">
               <div className="text-2xl font-bold text-purple-900">
-                {filteredAreas.length}
+                {selectedClient ? clients.find(c => c.id === selectedClient)?.razao_social || 'Cliente' : 'Nenhum'}
               </div>
-              <div className="text-sm text-purple-700">Áreas Filtradas</div>
+              <div className="text-sm text-purple-700">Cliente Selecionado</div>
             </div>
           </div>
         </div>

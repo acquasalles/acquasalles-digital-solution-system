@@ -324,6 +324,18 @@ export function AreasDeTrabalhoPage() {
                                             ))}
                                           </div>
                                         )}
+                                        {ponto.tipos_medicao && ponto.tipos_medicao.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-2">
+                                            {ponto.tipos_medicao.map((tipo, index) => (
+                                              <span
+                                                key={index}
+                                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                              >
+                                                {tipo}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
                                       <div className="text-xs text-gray-400">
                                         ID: {ponto.id.slice(-8)}

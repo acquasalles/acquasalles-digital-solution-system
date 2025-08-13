@@ -6,6 +6,7 @@ import {
   UserPlus, 
   Trash2, 
   Shield, 
+  ShieldCheck, 
   User,
   Building,
   Mail,
@@ -17,6 +18,19 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useIntl } from 'react-intl';
+
+interface UserWithRole {
+  user_id: string;
+  user_email: string;
+  user_role: string;
+  is_admin: boolean;
+  client_count: number;
+  clients: Array<{
+    id: string;
+    name: string;
+    city: string;
+  }>;
+}
 
 interface Client {
   id: string;
@@ -30,25 +44,23 @@ interface ClientUser {
   client_id: string;
   user_email: string;
   client_name: string;
-  client_city: string;
 }
 
 export function ClientUsersPage() {
+  const [usersWithRoles, setUsersWithRoles] = useState<UserWithRole[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [clientUsers, setClientUsers] = useState<ClientUser[]>([]);
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'roles' | 'assignments'>('roles');
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const intl = useIntl();
 
   useEffect(() => {
-    console.log('ClientUsersPage useEffect triggered', { user: !!user, isAdmin });
-    
     if (!user) {
-      console.log('No user, redirecting to login');
       navigate('/login');
       return;
     }
@@ -63,72 +75,78 @@ export function ClientUsersPage() {
   }, [user, isAdmin, navigate]);
 
   const fetchData = async () => {
-    console.log('Starting fetchData...');
     setLoading(true);
     setMessage(null);
-    
     try {
       const supabase = getSupabase();
       
-      // Fetch clients
-      console.log('Fetching clients...');
+      // Buscar usuários com roles usando a nova função RPC
+      const { data: usersData, error: usersError } = await supabase
+        .rpc('get_users_with_roles');
+      
+      if (usersError) throw usersError;
+      
+      // Buscar todos os clientes
       const { data: clientsData, error: clientsError } = await supabase
         .from('clientes')
         .select('id, razao_social, cidade')
         .order('razao_social');
       
-      if (clientsError) {
-        console.error('Error fetching clients:', clientsError);
-        throw clientsError;
-      }
+      if (clientsError) throw clientsError;
 
-      // Fetch client-user assignments
-      console.log('Fetching client-user assignments...');
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('client_users')
-        .select(`
-          id,
-          user_id,
-          client_id,
-          clientes!inner (
-            razao_social,
-            cidade
-          )
-        `);
+      console.log('Users with roles loaded:', usersData?.length || 0);
+      console.log('Clients loaded:', clientsData?.length || 0);
 
-      if (assignmentsError) {
-        console.error('Error fetching assignments:', assignmentsError);
-        throw assignmentsError;
-      }
-
-      console.log('Data fetched successfully:', {
-        clients: clientsData?.length || 0,
-        assignments: assignmentsData?.length || 0
-      });
-
+      setUsersWithRoles(usersData || []);
       setClients(clientsData || []);
-      
-      // Transform assignments data
-      const transformedAssignments = (assignmentsData || []).map(assignment => ({
-        id: assignment.id,
-        user_id: assignment.user_id,
-        client_id: assignment.client_id.toString(),
-        user_email: assignment.user_id, // We'll show user ID for now
-        client_name: assignment.clientes.razao_social,
-        client_city: assignment.clientes.cidade
-      }));
-
-      setClientUsers(transformedAssignments);
-
     } catch (error) {
-      console.error('Error in fetchData:', error);
+      console.error('Error fetching data:', error);
       setMessage({
         type: 'error',
         text: 'Erro ao carregar dados. Verifique suas permissões.'
       });
     } finally {
-      console.log('fetchData completed, setting loading to false');
       setLoading(false);
+    }
+  };
+
+  const handleRoleUpdate = async (userId: string, newRole: 'admin' | 'user') => {
+    if (userId === user?.id) {
+      setMessage({
+        type: 'error',
+        text: 'Você não pode alterar sua própria role.'
+      });
+      return;
+    }
+
+    setUpdatingRole(userId);
+    setMessage(null);
+    
+    try {
+      const supabase = getSupabase();
+      const { error } = await supabase
+        .rpc('update_user_role', {
+          target_user_id: userId,
+          new_role: newRole,
+          make_admin: newRole === 'admin'
+        });
+
+      if (error) throw error;
+
+      setMessage({
+        type: 'success',
+        text: `Role atualizada com sucesso para ${newRole === 'admin' ? 'Administrador' : 'Usuário'}.`
+      });
+
+      await fetchData();
+    } catch (error: any) {
+      console.error('Error updating role:', error);
+      setMessage({
+        type: 'error',
+        text: error.message || 'Erro ao atualizar role do usuário.'
+      });
+    } finally {
+      setUpdatingRole(null);
     }
   };
 
@@ -141,6 +159,7 @@ export function ClientUsersPage() {
       return;
     }
 
+    setLoading(true);
     setMessage(null);
     
     try {
@@ -163,7 +182,7 @@ export function ClientUsersPage() {
       await fetchData();
     } catch (error: any) {
       console.error('Error assigning client:', error);
-      const errorMessage = error.message?.includes('duplicate key') 
+      const errorMessage = error.message === 'duplicate key value violates unique constraint "client_users_user_id_client_id_key"'
         ? 'Este usuário já está atribuído a este cliente.'
         : 'Erro ao atribuir cliente ao usuário.';
       
@@ -171,12 +190,15 @@ export function ClientUsersPage() {
         type: 'error',
         text: errorMessage
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRemoveClientAssignment = async (assignmentId: string) => {
+  const handleRemoveClientAssignment = async (userId: string, clientId: string) => {
     if (!confirm('Tem certeza que deseja remover esta atribuição?')) return;
 
+    setLoading(true);
     setMessage(null);
     
     try {
@@ -184,7 +206,8 @@ export function ClientUsersPage() {
       const { error } = await supabase
         .from('client_users')
         .delete()
-        .eq('id', assignmentId);
+        .eq('user_id', userId)
+        .eq('client_id', parseInt(clientId));
 
       if (error) throw error;
 
@@ -200,12 +223,36 @@ export function ClientUsersPage() {
         type: 'error',
         text: 'Erro ao remover atribuição.'
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  console.log('Rendering ClientUsersPage, loading:', loading);
+  const getRoleIcon = (role: string, isAdmin: boolean) => {
+    if (isAdmin) {
+      return <ShieldCheck className="h-4 w-4 text-red-500" />;
+    }
+    return <User className="h-4 w-4 text-blue-500" />;
+  };
 
-  if (loading) {
+  const getRoleBadge = (role: string, isAdmin: boolean) => {
+    if (isAdmin) {
+      return (
+        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <ShieldCheck className="h-3 w-3 mr-1" />
+          Administrador
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+        <User className="h-3 w-3 mr-1" />
+        Usuário
+      </span>
+    );
+  };
+
+  if (loading && usersWithRoles.length === 0) {
     return (
       <div className="min-h-screen bg-gray-100">
         <Navigation />
@@ -213,7 +260,7 @@ export function ClientUsersPage() {
           <div className="flex items-center space-x-2">
             <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             <span className="text-lg font-medium text-gray-700">
-              Carregando dados...
+              Carregando usuários e permissões...
             </span>
           </div>
         </div>
@@ -235,11 +282,11 @@ export function ClientUsersPage() {
                 Gerenciamento de Usuários
               </h1>
               <p className="text-gray-600 mt-1">
-                Gerencie atribuições de clientes para usuários
+                Gerencie roles e atribuições de clientes para usuários
               </p>
             </div>
             <div className="text-sm text-gray-500">
-              {clientUsers.length} atribuições ativas
+              {usersWithRoles.length} usuários cadastrados
             </div>
           </div>
 
@@ -260,136 +307,291 @@ export function ClientUsersPage() {
               </span>
             </div>
           )}
+
+          {/* Tabs */}
+          <div className="border-b border-gray-200">
+            <nav className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('roles')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'roles'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Settings className="h-4 w-4 inline mr-2" />
+                Gerenciar Roles
+              </button>
+              <button
+                onClick={() => setActiveTab('assignments')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'assignments'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Building className="h-4 w-4 inline mr-2" />
+                Atribuir Clientes
+              </button>
+            </nav>
+          </div>
         </div>
 
-        {/* Assignment Form */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <UserPlus className="h-5 w-5 mr-2 text-green-600" />
-            Atribuir Cliente a Usuário
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                User ID
-              </label>
-              <input
-                type="text"
-                value={selectedUser}
-                onChange={(e) => setSelectedUser(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Cole o UUID do usuário"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Temporariamente use o UUID do usuário diretamente
+        {/* Roles Tab */}
+        {activeTab === 'roles' && (
+          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Shield className="h-5 w-5 mr-2 text-blue-600" />
+                Roles e Permissões de Usuários
+              </h2>
+              <p className="text-gray-600 text-sm mt-1">
+                Gerencie quem tem acesso administrativo e quais clientes cada usuário pode visualizar
               </p>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Cliente
-              </label>
-              <select
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Selecione um cliente</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.razao_social} - {client.cidade}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <button
-            onClick={handleAssignClient}
-            disabled={!selectedUser || !selectedClient}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 flex items-center justify-center"
-          >
-            <UserPlus className="h-5 w-5 mr-2" />
-            Atribuir Cliente ao Usuário
-          </button>
-        </div>
-
-        {/* Current Assignments */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-              <Users className="h-5 w-5 mr-2 text-purple-600" />
-              Atribuições Atuais
-            </h2>
-          </div>
-          
-          {clientUsers.length > 0 ? (
+            
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      User ID
+                      Usuário
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cliente
+                      Role Atual
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Clientes Atribuídos
+                    </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {clientUsers.map((assignment) => (
-                    <tr key={assignment.id} className="hover:bg-gray-50">
+                  {usersWithRoles.map((userWithRole) => (
+                    <tr key={userWithRole.user_id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
-                          <Mail className="h-5 w-5 text-gray-400 mr-3" />
-                          <div>
+                          <div className="flex-shrink-0">
+                            {getRoleIcon(userWithRole.user_role, userWithRole.is_admin)}
+                          </div>
+                          <div className="ml-3">
                             <div className="text-sm font-medium text-gray-900">
-                              {assignment.user_id.slice(0, 8)}...
+                              {userWithRole.user_email}
                             </div>
                             <div className="text-xs text-gray-500">
-                              {assignment.user_id}
+                              ID: {userWithRole.user_id.slice(-8)}
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Building className="h-5 w-5 text-blue-500 mr-3" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {assignment.client_name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {assignment.client_city}
+                        {getRoleBadge(userWithRole.user_role, userWithRole.is_admin)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-gray-900">
+                          <span className="font-medium">{userWithRole.client_count}</span> cliente(s)
+                        </div>
+                        {userWithRole.clients.length > 0 && (
+                          <div className="mt-1">
+                            <div className="flex flex-wrap gap-1">
+                              {userWithRole.clients.slice(0, 3).map((client) => (
+                                <span
+                                  key={client.id}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800"
+                                >
+                                  {client.name}
+                                </span>
+                              ))}
+                              {userWithRole.clients.length > 3 && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-200 text-gray-600">
+                                  +{userWithRole.clients.length - 3} mais
+                                </span>
+                              )}
                             </div>
                           </div>
-                        </div>
+                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => handleRemoveClientAssignment(assignment.id)}
-                          className="text-red-600 hover:text-red-900 p-1"
-                          title="Remover Atribuição"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center space-x-2">
+                          {userWithRole.user_id !== user?.id ? (
+                            <>
+                              {!userWithRole.is_admin && (
+                                <button
+                                  onClick={() => handleRoleUpdate(userWithRole.user_id, 'admin')}
+                                  disabled={updatingRole === userWithRole.user_id || loading}
+                                  className="inline-flex items-center px-3 py-1 border border-red-300 rounded text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500 disabled:opacity-50"
+                                  title="Promover para Administrador"
+                                >
+                                  {updatingRole === userWithRole.user_id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <ShieldCheck className="h-3 w-3 mr-1" />
+                                  )}
+                                  Promover
+                                </button>
+                              )}
+                              {userWithRole.is_admin && (
+                                <button
+                                  onClick={() => handleRoleUpdate(userWithRole.user_id, 'user')}
+                                  disabled={updatingRole === userWithRole.user_id || loading}
+                                  className="inline-flex items-center px-3 py-1 border border-blue-300 rounded text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                                  title="Rebaixar para Usuário"
+                                >
+                                  {updatingRole === userWithRole.user_id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <User className="h-3 w-3 mr-1" />
+                                  )}
+                                  Rebaixar
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-500 px-3 py-1 bg-gray-100 rounded">
+                              Você mesmo
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          ) : (
-            <div className="p-6 text-center text-gray-500">
-              <Users className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-              <p>Nenhuma atribuição encontrada</p>
+          </div>
+        )}
+
+        {/* Client Assignments Tab */}
+        {activeTab === 'assignments' && (
+          <div className="space-y-6">
+            {/* Assignment Form */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <UserPlus className="h-5 w-5 mr-2 text-green-600" />
+                Atribuir Cliente a Usuário
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Usuário
+                  </label>
+                  <select
+                    value={selectedUser}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione um usuário</option>
+                    {usersWithRoles.filter(u => !u.is_admin).map((user) => (
+                      <option key={user.user_id} value={user.user_id}>
+                        {user.user_email} (Usuário)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Cliente
+                  </label>
+                  <select
+                    value={selectedClient}
+                    onChange={(e) => setSelectedClient(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Selecione um cliente</option>
+                    {clients.map((client) => (
+                      <option key={client.id} value={client.id}>
+                        {client.razao_social} - {client.cidade}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <button
+                onClick={handleAssignClient}
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 flex items-center justify-center"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-5 w-5 mr-2" />
+                    Atribuir Cliente ao Usuário
+                  </>
+                )}
+              </button>
             </div>
-          )}
-        </div>
+
+            {/* Client Assignments List */}
+            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+              <div className="p-6 border-b border-gray-200">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <Users className="h-5 w-5 mr-2 text-purple-600" />
+                  Atribuições de Clientes Detalhadas
+                </h2>
+              </div>
+              
+              <div className="divide-y divide-gray-200">
+                {usersWithRoles.filter(u => u.client_count > 0).map((user) => (
+                  <div key={user.user_id} className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center">
+                        <Mail className="h-5 w-5 text-gray-400 mr-3" />
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-900">{user.user_email}</h3>
+                          <p className="text-xs text-gray-500">
+                            {user.client_count} cliente(s) atribuído(s)
+                          </p>
+                        </div>
+                      </div>
+                      {getRoleBadge(user.user_role, user.is_admin)}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {user.clients.map((client) => (
+                        <div 
+                          key={`${user.user_id}-${client.id}`}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border"
+                        >
+                          <div className="flex items-center">
+                            <Building className="h-4 w-4 text-blue-500 mr-2" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{client.name}</p>
+                              <p className="text-xs text-gray-500">{client.city}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveClientAssignment(user.user_id, client.id)}
+                            className="text-red-600 hover:text-red-900 p-1"
+                            title="Remover Atribuição"
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                
+                {usersWithRoles.filter(u => u.client_count > 0).length === 0 && (
+                  <div className="p-6 text-center text-gray-500">
+                    <Users className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                    <p>Nenhuma atribuição de cliente encontrada</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

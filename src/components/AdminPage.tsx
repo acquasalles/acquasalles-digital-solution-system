@@ -45,7 +45,7 @@ export function AdminPage() {
   const [showWaterQualityReport, setShowWaterQualityReport] = useState(false);
   const [showA4Report, setShowA4Report] = useState(false);
   const [showComplianceAnalysis, setShowComplianceAnalysis] = useState(false);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const intl = useIntl();
   
   const {
@@ -76,6 +76,13 @@ export function AdminPage() {
     }
   }, [user, fetchClients]);
 
+  // Clear cache when user role changes to ensure fresh data
+  useEffect(() => {
+    if (user) {
+      // Clear cache and refetch when admin status changes
+      fetchClients();
+    }
+  }, [isAdmin, user, fetchClients]);
   // Effect to refresh report when client changes and report is open
   useEffect(() => {
     const refreshReportIfOpen = async () => {

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { getSupabase } from './supabase';
+import { useAuth } from '../components/AuthProvider';
 
 interface Client {
   id: string;
@@ -26,6 +27,7 @@ export function useClients() {
 }
 
 export function ClientsProvider({ children }: { children: React.ReactNode }) {
+  const { isAdmin } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,10 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
       let hasMore = true;
       let lastId = '0';
       
-      // Fetch all clients in chunks
+      // Fetch clients based on user role
+      if (isAdmin) {
+        console.log('Fetching all clients for admin user');
+        // Admin users can see all clients
       while (hasMore) {
         const { data: chunk, error: chunkError } = await supabase
           .from('clientes')
@@ -77,6 +82,33 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
           hasMore = false;
         }
       }
+      } else {
+        console.log('Fetching assigned clients for regular user');
+        // Regular users can only see assigned clients via client_users
+        const { data: assignedClients, error: assignedError } = await supabase
+          .from('client_users')
+          .select(`
+            clientes:client_id (
+              id,
+              razao_social,
+              cidade
+            )
+          `)
+          .eq('user_id', supabase.auth.getUser().then(u => u.data.user?.id));
+
+        if (assignedError) throw assignedError;
+
+        // Process assigned clients
+        (assignedClients || []).forEach(assignment => {
+          if (assignment.clientes) {
+            allClients.push({
+              id: assignment.clientes.id.toString(),
+              razao_social: assignment.clientes.razao_social || 'Unknown',
+              cidade: assignment.clientes.cidade || 'X'
+            });
+          }
+        });
+      }
       
       // Remove duplicates and sort
       const uniqueClients = Array.from(new Map(
@@ -85,6 +117,7 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
       
       console.log('Client cache populated:', {
         totalClients: uniqueClients.length,
+        userRole: isAdmin ? 'admin' : 'regular',
         timestamp: new Date().toISOString()
       });
 
@@ -94,13 +127,14 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Error fetching clients:', {
         error,
+        userRole: isAdmin ? 'admin' : 'regular',
         timestamp: new Date().toISOString()
       });
       setError('Error fetching clients');
     } finally {
       setIsLoading(false);
     }
-  }, [clients.length]);
+  }, [clients.length, isAdmin]);
 
   const clearCache = useCallback(() => {
     setClients([]);

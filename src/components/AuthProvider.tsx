@@ -50,12 +50,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Fallback to RPC call
         const { data: isAdmin, error } = await currentSupabase.rpc('is_admin');
-        console.log('Admin check result:', { isAdmin, error });
+        console.log('Admin check result:', { isAdmin, error, userId: user.id });
         
         if (error) throw error;
         return !!isAdmin;
       } catch (error) {
-        console.error('Admin check failed:', error);
+        console.error('Admin check failed:', error, 'for user:', user.id);
         return false;
       }
     };
@@ -78,6 +78,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           if (isMounted) {
             console.log('Setting initial state:', { 
               user: session.user,
+              userId: session.user.id,
               isAdmin,
               isLoading: false 
             });

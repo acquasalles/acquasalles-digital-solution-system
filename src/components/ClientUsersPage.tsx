@@ -457,6 +457,15 @@ export function ClientUsersPage() {
                       </td>
                     </tr>
                   ))}
+                  {usersWithRoles.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                        <User className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                        <p>Nenhum usuário encontrado</p>
+                        <p className="text-xs mt-1">As funcionalidades completas de gerenciamento serão implementadas em breve</p>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

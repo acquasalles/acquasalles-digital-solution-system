@@ -312,7 +312,7 @@ export function AreaFormModal({
                     id="descricao"
                     value={descricao}
                     onChange={(e) => setDescricao(e.target.value)}
-                    rows={3}
+                    rows={1}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Descrição detalhada da área de trabalho"
                     disabled={loading}
@@ -327,7 +327,7 @@ export function AreaFormModal({
                     id="localizacao"
                     value={localizacao}
                     onChange={(e) => setLocalizacao(e.target.value)}
-                    rows={4}
+                    rows={1}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                     placeholder='Exemplo: {"latitude": -23.5505, "longitude": -46.6333, "endereco": "Rua Exemplo, 123"}'
                     disabled={loading}
@@ -345,7 +345,7 @@ export function AreaFormModal({
                     id="observacao"
                     value={observacao}
                     onChange={(e) => setObservacao(e.target.value)}
-                    rows={3}
+                    rows={1}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
                     placeholder="Observações adicionais sobre a área"
                     disabled={loading}

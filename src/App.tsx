@@ -18,6 +18,9 @@ interface ProtectedRouteProps {
 function ProtectedRoute({ children, requireAdmin = false }: ProtectedRouteProps) {
   const { user, isAdmin } = useAuth();
   
+  // Debug logging for admin verification
+  console.log('ProtectedRoute check:', { user: !!user, isAdmin, requireAdmin });
+  
   if (!user) return <Navigate to="/login" />;
   if (requireAdmin && !isAdmin) return <Navigate to="/admin" />;
   

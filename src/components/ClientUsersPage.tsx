@@ -42,6 +42,7 @@ export function ClientUsersPage() {
     }
 
     if (!isAdmin) {
+      console.log('User is not admin, redirecting to /admin');
       navigate('/admin');
       return;
     }

@@ -94,19 +94,19 @@ export function Navigation() {
                     )}
                   </div>
 
-                <Link
-                  to="/client-users"
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${
-                    isActive('/client-users')
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  <span className="flex items-center">
-                    <Users className="h-4 w-4 mr-2" />
-                    {intl.formatMessage({ id: 'nav.clientUsers' })}
-                  </span>
-                </Link>
+                  <Link
+                    to="/client-users"
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      isActive('/client-users')
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="flex items-center">
+                      <Users className="h-4 w-4 mr-2" />
+                      {intl.formatMessage({ id: 'nav.clientUsers' })}
+                    </span>
+                  </Link>
                 </>
               )}
             </div>

@@ -482,6 +482,18 @@ export function AreaFormModal({
             </form>
           </div>
         </div>
+
+        {/* Modal de Ponto de Coleta */}
+        {areaData && (
+          <PontoDeColetaFormModal
+            isOpen={showPontoModal}
+            onClose={() => setShowPontoModal(false)}
+            onSave={handleSavePonto}
+            areaId={areaData.id}
+            clienteId={areaData.cliente_id}
+            pontoData={editingPonto}
+          />
+        )}
       </div>
       
       {/* Modal de Ponto de Coleta */}

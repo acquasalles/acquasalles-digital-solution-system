@@ -72,12 +72,6 @@ export default {
   'clientUsers.error.fetch': 'Erro ao buscar dados',
   'clientUsers.confirmRemove': 'Tem certeza que deseja remover esta atribuição?',
   'clientUsers.alreadyAssigned': 'Este usuário já está atribuído a este cliente',
-  'clientUsers.roleManagement': 'Gerenciamento de Roles',
-  'clientUsers.promoteUser': 'Promover para Admin',
-  'clientUsers.demoteUser': 'Rebaixar para Usuário',
-  'clientUsers.cannotModifyOwnRole': 'Não é possível alterar sua própria role',
-  'clientUsers.roleUpdated': 'Role atualizada com sucesso',
-  'clientUsers.currentRole': 'Role Atual',
 
   // Image Modal
   'imageModal.notAvailable': 'Imagem não disponível'

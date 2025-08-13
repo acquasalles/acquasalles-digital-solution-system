@@ -5,12 +5,16 @@ import { Loader2, MapPin, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from
 import { useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useClients } from '../lib/ClientsContext';
+import { AreaFormModal } from './AreaFormModal';
 
 interface AreaDeTrabalho {
   id: string;
   nome_area: string;
   cliente_id: string;
   ponto_de_coleta_count: number;
+  descricao?: string;
+  localizacao?: any;
+  observacao?: string;
 }
 
 interface PontoDeColeta {
@@ -31,6 +35,10 @@ export function AreasDeTrabalhoPage() {
   const { user, isAdmin } = useAuth();
   const { clients, fetchClients } = useClients();
   const navigate = useNavigate();
+
+  // Estados para o modal de área
+  const [showAreaModal, setShowAreaModal] = useState(false);
+  const [editingArea, setEditingArea] = useState<AreaDeTrabalho | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -66,6 +74,10 @@ export function AreasDeTrabalhoPage() {
         .select(`
           id,
           nome_area,
+          cliente_id,
+          descricao,
+          localizacao,
+          observacao,
           ponto_de_coleta(count)
         `)
         .eq('cliente_id', selectedClient)
@@ -77,7 +89,10 @@ export function AreasDeTrabalhoPage() {
       const areasWithCount = (data || []).map(area => ({
         id: area.id,
         nome_area: area.nome_area,
-        cliente_id: selectedClient,
+        cliente_id: area.cliente_id,
+        descricao: area.descricao,
+        localizacao: area.localizacao,
+        observacao: area.observacao,
         ponto_de_coleta_count: area.ponto_de_coleta?.[0]?.count || 0
       }));
 

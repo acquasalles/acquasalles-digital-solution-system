@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
-import { Loader2, MapPin, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, MapPin, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useClients } from '../lib/ClientsContext';
@@ -10,15 +10,22 @@ interface AreaDeTrabalho {
   id: string;
   nome_area: string;
   cliente_id: string;
-  localizacao?: any;
+  ponto_de_coleta_count: number;
+}
+
+interface PontoDeColeta {
+  id: string;
+  nome: string;
   descricao?: string;
-  observacao?: string;
-  created_at: string;
+  tipos_medicao?: string[];
 }
 
 export function AreasDeTrabalhoPage() {
   const [areas, setAreas] = useState<AreaDeTrabalho[]>([]);
   const [selectedClient, setSelectedClient] = useState('');
+  const [expandedAreaId, setExpandedAreaId] = useState<string | null>(null);
+  const [expandedAreaPoints, setExpandedAreaPoints] = useState<PontoDeColeta[]>([]);
+  const [loadingPoints, setLoadingPoints] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user, isAdmin } = useAuth();
@@ -59,22 +66,62 @@ export function AreasDeTrabalhoPage() {
         .select(`
           id,
           nome_area,
-          localizacao,
-          descricao,
-          observacao,
-          created_at
+          ponto_de_coleta(count)
         `)
         .eq('cliente_id', selectedClient)
-        .order('created_at', { ascending: false });
+        .order('nome_area', { ascending: true });
 
       if (error) throw error;
 
-      setAreas(data || []);
+      // Mapear os dados para incluir a contagem de pontos de coleta
+      const areasWithCount = (data || []).map(area => ({
+        id: area.id,
+        nome_area: area.nome_area,
+        cliente_id: selectedClient,
+        ponto_de_coleta_count: area.ponto_de_coleta?.[0]?.count || 0
+      }));
+
+      setAreas(areasWithCount);
     } catch (error) {
       console.error('Erro ao buscar áreas de trabalho:', error);
       setError('Erro ao carregar áreas de trabalho');
     } finally {
+  const fetchPontosDeColeta = async (areaId: string) => {
+    setLoadingPoints(true);
+    try {
+      const supabase = getSupabase();
+      
+      const { data, error } = await supabase
+        .from('ponto_de_coleta')
+        .select(`
+          id,
+          nome,
+          descricao,
+          tipos_medicao
+        `)
+        .eq('area_de_trabalho_id', areaId)
+        .order('nome', { ascending: true });
       setLoading(false);
+      if (error) throw error;
+    }
+      setExpandedAreaPoints(data || []);
+    } catch (error) {
+      console.error('Erro ao buscar pontos de coleta:', error);
+      setError('Erro ao carregar pontos de coleta');
+    } finally {
+      setLoadingPoints(false);
+    }
+  };
+  };
+  const handleRowClick = async (areaId: string) => {
+    if (expandedAreaId === areaId) {
+      // Recolher se já estiver expandida
+      setExpandedAreaId(null);
+      setExpandedAreaPoints([]);
+    } else {
+      // Expandir nova área
+      setExpandedAreaId(areaId);
+      await fetchPontosDeColeta(areaId);
     }
   };
 
@@ -176,10 +223,7 @@ export function AreasDeTrabalhoPage() {
                     Nome da Área
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Descrição
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data de Criação
+                    # Pontos de Coleta
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
@@ -188,61 +232,128 @@ export function AreasDeTrabalhoPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {areas.map((area) => (
-                  <tr key={area.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <MapPin className="h-5 w-5 text-gray-400 mr-3" />
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {area.nome_area}
-                          </div>
-                          {area.observacao && (
-                            <div className="text-sm text-gray-500">
-                              {area.observacao}
-                            </div>
+                  <React.Fragment key={area.id}>
+                    <tr 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => handleRowClick(area.id)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {expandedAreaId === area.id ? (
+                            <ChevronDown className="h-4 w-4 text-gray-400 mr-2" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4 text-gray-400 mr-2" />
                           )}
+                          <MapPin className="h-5 w-5 text-gray-400 mr-3" />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900">
+                              {area.nome_area}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900">
-                        {area.descricao || 'Sem descrição'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(area.created_at).toLocaleDateString('pt-BR')}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => {/* TODO: Implementar modal de edição */}}
-                          className="text-blue-600 hover:text-blue-900 p-1"
-                          title="Editar"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(area.id, area.nome_area)}
-                          className="text-red-600 hover:text-red-900 p-1"
-                          title="Excluir"
-                          disabled={loading}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {area.ponto_de_coleta_count} {area.ponto_de_coleta_count === 1 ? 'ponto' : 'pontos'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Evita expandir a linha
+                              /* TODO: Implementar modal de edição */
+                            }}
+                            className="text-blue-600 hover:text-blue-900 p-1"
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Evita expandir a linha
+                              handleDelete(area.id, area.nome_area);
+                            }}
+                            className="text-red-600 hover:text-red-900 p-1"
+                            title="Excluir"
+                            disabled={loading}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    
+                    {/* Linha expandida com pontos de coleta */}
+                    {expandedAreaId === area.id && (
+                      <tr className="bg-gray-50">
+                        <td colSpan={3} className="px-6 py-4">
+                          <div className="border-l-4 border-blue-400 pl-4">
+                            <h4 className="text-sm font-medium text-gray-900 mb-3">
+                              Pontos de Coleta - {area.nome_area}
+                            </h4>
+                            
+                            {loadingPoints ? (
+                              <div className="flex items-center justify-center py-4">
+                                <Loader2 className="h-5 w-5 animate-spin text-blue-600 mr-2" />
+                                <span className="text-sm text-gray-600">Carregando pontos de coleta...</span>
+                              </div>
+                            ) : expandedAreaPoints.length > 0 ? (
+                              <div className="space-y-2">
+                                {expandedAreaPoints.map((ponto) => (
+                                  <div key={ponto.id} className="bg-white p-3 rounded-lg border border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <h5 className="text-sm font-medium text-gray-900">{ponto.nome}</h5>
+                                        {ponto.descricao && (
+                                          <p className="text-xs text-gray-500 mt-1">{ponto.descricao}</p>
+                                        )}
+                                        {ponto.tipos_medicao && ponto.tipos_medicao.length > 0 && (
+                                          <div className="flex flex-wrap gap-1 mt-2">
+                                            {ponto.tipos_medicao.map((tipo, index) => (
+                                              <span
+                                                key={index}
+                                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                              >
+                                                {tipo}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        ID: {ponto.id.slice(-8)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4">
+                                <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">
+                                  Nenhum ponto de coleta cadastrado para esta área
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
                 {areas.length === 0 && !loading && selectedClient && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
                       Nenhuma área de trabalho cadastrada para este cliente
                     </td>
                   </tr>
                 )}
                 {!selectedClient && (
                   <tr>
-                    <td colSpan={4} className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan={3} className="px-6 py-4 text-center text-gray-500">
                       Selecione um cliente para visualizar as áreas de trabalho
                     </td>
                   </tr>

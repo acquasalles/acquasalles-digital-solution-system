@@ -188,6 +188,16 @@ export function AreasDeTrabalhoPage() {
     }
   };
 
+  const handleSaveArea = () => {
+    fetchData();
+    setShowAreaModal(false);
+  };
+
+  const handleOpenEditAreaModal = (area: AreaDeTrabalho) => {
+    setEditingArea(area);
+    setShowAreaModal(true);
+  };
+
   if (loading && areas.length === 0) {
     return (
       <div className="min-h-screen bg-gray-100">
@@ -222,7 +232,6 @@ export function AreasDeTrabalhoPage() {
             <button
               onClick={() => {/* TODO: Implementar modal de criação */}}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center"
-              type="button"
             >
               <Plus className="h-4 w-4 mr-2" />
               Nova Área
@@ -304,10 +313,9 @@ export function AreasDeTrabalhoPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
                           <button
-                            type="button"
                             onClick={(e) => {
                               e.stopPropagation(); // Evita expandir a linha
-                              /* TODO: Implementar modal de edição */
+                              handleOpenEditAreaModal(area);
                             }}
                             className="text-blue-600 hover:text-blue-900 p-1"
                             title="Editar"
@@ -315,7 +323,6 @@ export function AreasDeTrabalhoPage() {
                             <Pencil className="h-4 w-4" />
                           </button>
                           <button
-                            type="button"
                             onClick={(e) => {
                               e.stopPropagation(); // Evita expandir a linha
                               handleDelete(area.id, area.nome_area);

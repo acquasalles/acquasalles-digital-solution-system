@@ -104,7 +104,6 @@ export function PontoDeColetaFormModal({
         descricao: descricao.trim() || null,
         tipos_medicao: selectedTiposMedicao,
         area_de_trabalho_id: areaId,
-        cliente_id: parseInt(clienteId), // Necessário para políticas RLS
         cliente_id: parseInt(clienteId),
       };
 

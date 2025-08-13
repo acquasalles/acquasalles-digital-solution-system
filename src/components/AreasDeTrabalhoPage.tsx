@@ -86,6 +86,10 @@ export function AreasDeTrabalhoPage() {
       console.error('Erro ao buscar áreas de trabalho:', error);
       setError('Erro ao carregar áreas de trabalho');
     } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchPontosDeColeta = async (areaId: string) => {
     setLoadingPoints(true);
     try {
@@ -101,9 +105,8 @@ export function AreasDeTrabalhoPage() {
         `)
         .eq('area_de_trabalho_id', areaId)
         .order('nome', { ascending: true });
-      setLoading(false);
+
       if (error) throw error;
-    }
       setExpandedAreaPoints(data || []);
     } catch (error) {
       console.error('Erro ao buscar pontos de coleta:', error);
@@ -111,7 +114,6 @@ export function AreasDeTrabalhoPage() {
     } finally {
       setLoadingPoints(false);
     }
-  };
   };
   const handleRowClick = async (areaId: string) => {
     if (expandedAreaId === areaId) {

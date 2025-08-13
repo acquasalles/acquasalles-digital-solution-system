@@ -20,6 +20,7 @@ interface PontoDeColetaFormModalProps {
   onClose: () => void;
   onSave: () => void;
   areaId: string;
+  clienteId: string; // ID do cliente para políticas RLS
   clienteId: string;
   pontoData?: PontoDeColeta | null;
 }
@@ -29,6 +30,7 @@ export function PontoDeColetaFormModal({
   onClose,
   onSave,
   areaId,
+  clienteId,
   clienteId,
   pontoData,
 }: PontoDeColetaFormModalProps) {
@@ -104,6 +106,7 @@ export function PontoDeColetaFormModal({
         descricao: descricao.trim() || null,
         tipos_medicao: selectedTiposMedicao,
         area_de_trabalho_id: areaId,
+        cliente_id: parseInt(clienteId), // Necessário para políticas RLS
         cliente_id: parseInt(clienteId),
       };
 

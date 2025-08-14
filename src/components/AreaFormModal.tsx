@@ -120,6 +120,7 @@ export function AreaFormModal({
 
       const pontosComNomes = (pontosData || []).map(ponto => ({
         ...ponto,
+       tipos_medicao: ponto.tipos_medicao || [], // Garantir que o array original seja preservado
         tipos_medicao_names: (ponto.tipos_medicao || []).map((tipoId: string) =>
           newTiposMap.get(tipoId) || tipoId
         )

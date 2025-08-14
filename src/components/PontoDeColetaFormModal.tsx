@@ -49,7 +49,10 @@ export function PontoDeColetaFormModal({
         setNome(pontoData.nome);
         setDescricao(pontoData.descricao || '');
         setLocalizacao(pontoData.localizacao ? JSON.stringify(pontoData.localizacao, null, 2) : '');
-        setSelectedTiposMedicao(pontoData.tipos_medicao || []);
+       // Garantir que tipos_medicao seja um array válido
+       const tiposMedicao = Array.isArray(pontoData.tipos_medicao) ? pontoData.tipos_medicao : [];
+       console.log('Carregando tipos de medição para edição:', tiposMedicao);
+       setSelectedTiposMedicao(tiposMedicao);
       } else {
         // Modo de criação
         setNome('');
@@ -77,11 +80,16 @@ export function PontoDeColetaFormModal({
   };
 
   const handleTipoMedicaoToggle = (tipoId: string) => {
+   console.log('Toggle tipo medição:', tipoId, 'Estado atual:', selectedTiposMedicao);
     setSelectedTiposMedicao(prev => {
       if (prev.includes(tipoId)) {
-        return prev.filter(id => id !== tipoId);
+       const newTypes = prev.filter(id => id !== tipoId);
+       console.log('Removendo tipo, nova lista:', newTypes);
+       return newTypes;
       } else {
-        return [...prev, tipoId];
+       const newTypes = [...prev, tipoId];
+       console.log('Adicionando tipo, nova lista:', newTypes);
+       return newTypes;
       }
     });
   };

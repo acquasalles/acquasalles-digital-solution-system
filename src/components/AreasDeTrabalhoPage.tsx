@@ -202,7 +202,7 @@ export function AreasDeTrabalhoPage() {
         .from('area_de_trabalho')
         .select('id, nome_area')
         .eq('id', id)
-        .single();
+        .maybeSingle();
       
       console.log('Verificação de existência:', { areaExists, checkError });
       
@@ -225,7 +225,7 @@ export function AreasDeTrabalhoPage() {
         .from('area_de_trabalho')
         .select('id')
         .eq('id', id)
-        .single();
+        .maybeSingle();
         
       console.log('Verificação pós-deleção:', { stillExists, verifyError });
       

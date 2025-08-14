@@ -194,18 +194,55 @@ export function AreasDeTrabalhoPage() {
     setError(null); // Limpar erros anteriores
     
     try {
+      console.log('Iniciando deleção da área:', { id, nomeArea });
       const supabase = getSupabase();
+      
+      // Primeiro, verificar se a área existe
+      const { data: areaExists, error: checkError } = await supabase
+        .from('area_de_trabalho')
+        .select('id, nome_area')
+        .eq('id', id)
+        .single();
+      
+      console.log('Verificação de existência:', { areaExists, checkError });
+      
+      if (checkError || !areaExists) {
+        throw new Error(`Área não encontrada: ${checkError?.message || 'Item não existe'}`);
+      }
+      
+      // Executar a deleção
       const { error } = await supabase
         .from('area_de_trabalho')
         .delete()
         .eq('id', id);
 
+      console.log('Resultado da deleção:', { error });
+      
       if (error) throw error;
+
+      // Verificar se realmente foi deletado
+      const { data: stillExists, error: verifyError } = await supabase
+        .from('area_de_trabalho')
+        .select('id')
+        .eq('id', id)
+        .single();
+        
+      console.log('Verificação pós-deleção:', { stillExists, verifyError });
+      
+      if (stillExists && !verifyError) {
+        throw new Error('A área não foi deletada. Possível problema de permissões.');
+      }
 
       // Mostrar mensagem de sucesso
       alert(`✅ Área "${nomeArea}" excluída com sucesso!`);
       
-      await fetchData();
+      // Recarregar dados
+      try {
+        await fetchData();
+      } catch (fetchError) {
+        console.error('Erro ao recarregar dados:', fetchError);
+        // Não falhar se o reload der erro, pois a deleção já aconteceu
+      }
       
       // Se a área expandida foi excluída, fechar expansão
       if (expandedAreaId === id) {

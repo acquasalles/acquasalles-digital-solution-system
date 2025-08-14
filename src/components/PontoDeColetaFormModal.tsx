@@ -107,6 +107,7 @@ export function PontoDeColetaFormModal({
 
     try {
       const supabase = getSupabase();
+      console.log('Salvando ponto com tipos de medição:', selectedTiposMedicao);
       let dataToSave: any = {
         nome: nome.trim(),
         descricao: descricao.trim() || null,

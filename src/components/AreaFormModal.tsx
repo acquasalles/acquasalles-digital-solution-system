@@ -21,7 +21,7 @@ interface Client {
 interface AreaFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSave: () => Promise<void>;
   areaData?: AreaDeTrabalho | null;
   selectedClientId?: string;
   clients: Client[];
@@ -184,7 +184,7 @@ export function AreaFormModal({
         if (error) throw error;
       }
 
-      onSave();
+      await onSave();
       onClose();
     } catch (err: any) {
       console.error('Erro ao salvar área:', err);

@@ -169,9 +169,9 @@ export function AreasDeTrabalhoPage() {
     setShowAreaModal(true);
   };
 
-  const handleSaveArea = useCallback(() => {
+  const handleSaveArea = useCallback(async () => {
     console.log('Saving area');
-    fetchData();
+    await fetchData();
   }, [fetchData]);
 
   const handleRowClick = async (areaId: string) => {

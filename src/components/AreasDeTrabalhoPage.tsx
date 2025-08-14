@@ -174,6 +174,12 @@ export function AreasDeTrabalhoPage() {
     await fetchData();
   }, [fetchData]);
 
+  const handleCloseAreaModal = useCallback(async () => {
+    console.log('Closing area modal - refreshing data');
+    await fetchData();
+    setShowAreaModal(false);
+  }, [fetchData]);
+
   const handleRowClick = async (areaId: string) => {
     if (expandedAreaId === areaId) {
       // Recolher se já estiver expandida
@@ -513,7 +519,7 @@ export function AreasDeTrabalhoPage() {
       {/* Modal de Criação/Edição de Área */}
       <AreaFormModal
         isOpen={showAreaModal}
-        onClose={() => setShowAreaModal(false)}
+        onClose={handleCloseAreaModal}
         onSave={handleSaveArea}
         areaData={editingArea}
         selectedClientId={selectedClient}

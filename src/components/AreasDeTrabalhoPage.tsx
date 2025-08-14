@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCallback } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { useAuth } from './AuthProvider';
-import { Loader2, MapPin, Plus, Pencil, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Loader2, MapPin, Plus, Pencil, Trash2, ChevronDown, ChevronRight, AlertTriangle, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation } from './Navigation';
 import { useClients } from '../lib/ClientsContext';
@@ -187,9 +187,12 @@ export function AreasDeTrabalhoPage() {
   };
 
   const handleDelete = async (id: string, nomeArea: string) => {
-    if (!confirm(`Tem certeza que deseja excluir a área "${nomeArea}"?`)) return;
+    const confirmMessage = `⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nTem certeza que deseja excluir a área "${nomeArea}"?\n\nIsto também excluirá todos os pontos de coleta relacionados.`;
+    if (!confirm(confirmMessage)) return;
 
     setLoading(true);
+    setError(null); // Limpar erros anteriores
+    
     try {
       const supabase = getSupabase();
       const { error } = await supabase
@@ -199,10 +202,23 @@ export function AreasDeTrabalhoPage() {
 
       if (error) throw error;
 
+      // Mostrar mensagem de sucesso
+      alert(`✅ Área "${nomeArea}" excluída com sucesso!`);
+      
       await fetchData();
+      
+      // Se a área expandida foi excluída, fechar expansão
+      if (expandedAreaId === id) {
+        setExpandedAreaId(null);
+        setExpandedAreaPoints([]);
+      }
     } catch (error) {
       console.error('Erro ao excluir área:', error);
-      setError('Erro ao excluir área de trabalho');
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      setError(`Erro ao excluir área de trabalho: ${errorMessage}`);
+      
+      // Mostrar alerta com erro específico
+      alert(`❌ Erro ao excluir área "${nomeArea}":\n${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -335,13 +351,22 @@ export function AreasDeTrabalhoPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation(); // Evita expandir a linha
+                              if (loading) return; // Evita cliques duplos
                               handleDelete(area.id, area.nome_area);
                             }}
-                            className="text-red-600 hover:text-red-900 p-1"
+                            className={`p-1 transition-colors duration-200 ${
+                              loading 
+                                ? 'text-gray-400 cursor-not-allowed' 
+                                : 'text-red-600 hover:text-red-900 hover:bg-red-50 rounded'
+                            }`}
                             title="Excluir"
                             disabled={loading}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {loading ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-gray-600"></div>
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
                           </button>
                         </div>
                       </td>

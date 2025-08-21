@@ -123,7 +123,6 @@ export function AdminPage() {
     }
   };
 
-  const handleDownloadA4PDF = async () => {
   const handleDownloadA4PDF = async (chartImages?: Map<string, string>) => {
     if (!reportData) {
       console.error('No report data available for A4 PDF generation');

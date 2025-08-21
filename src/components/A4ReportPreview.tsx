@@ -1,12 +1,13 @@
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { Download, Printer, Calendar, MapPin, Phone, Mail, Building, FileText, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
-import { Bar } from 'react-chartjs-2';
+import { Bar, getElementAtEvent, getDatasetAtEvent } from 'react-chartjs-2';
 import { generatePDF } from '../lib/generatePDF';
 import { useIntl } from 'react-intl';
 import type { ReportData } from '../types/report';
 import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
 import type { ComplianceAnalysis } from '../types/waterQuality';
+import type { Chart } from 'chart.js';
 
 interface ClientInfo {
   name: string;
@@ -43,7 +44,7 @@ interface A4ReportPreviewProps {
   reportData?: ReportData;
   reportTitle?: string;
   reportPeriod?: { start: Date; end: Date };
-  onDownloadPDF?: () => Promise<void>;
+  onDownloadPDF?: (chartImages?: Map<string, string>) => Promise<void>;
   isGeneratingPDF?: boolean;
   clientId?: string;
 }
@@ -76,8 +77,54 @@ export function A4ReportPreview({
   const [currentPage, setCurrentPage] = useState(1);
   const [realAnalysis, setRealAnalysis] = useState<ComplianceAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [chartImages, setChartImages] = useState<Map<string, string>>(new Map());
+  const chartRefs = useRef<Map<string, Chart>>(new Map());
   const reportRef = useRef<HTMLDivElement>(null);
   const intl = useIntl();
+
+  // Function to register chart reference
+  const registerChart = useCallback((pointId: string, chartInstance: Chart | null) => {
+    if (chartInstance) {
+      chartRefs.current.set(pointId, chartInstance);
+    } else {
+      chartRefs.current.delete(pointId);
+    }
+  }, []);
+
+  // Function to capture chart images
+  const captureChartImages = useCallback(async () => {
+    const newChartImages = new Map<string, string>();
+    
+    // Wait a bit for charts to fully render
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    for (const [pointId, chartInstance] of chartRefs.current.entries()) {
+      try {
+        if (chartInstance && chartInstance.canvas) {
+          const base64Image = chartInstance.toBase64Image('image/png', 1.0);
+          newChartImages.set(pointId, base64Image);
+          console.log(`Captured chart image for point: ${pointId}`);
+        }
+      } catch (error) {
+        console.error(`Error capturing chart for point ${pointId}:`, error);
+      }
+    }
+    
+    setChartImages(newChartImages);
+    console.log(`Total chart images captured: ${newChartImages.size}`);
+  }, []);
+
+  // Capture chart images when collection points data changes or current page changes
+  useEffect(() => {
+    if (collectionPointsData.length > 0 && currentPage > 1) {
+      // Delay capture to ensure charts are rendered
+      const timer = setTimeout(() => {
+        captureChartImages();
+      }, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [collectionPointsData, currentPage, captureChartImages]);
 
   // Load real water quality analysis data
   React.useEffect(() => {
@@ -157,7 +204,9 @@ export function A4ReportPreview({
 
   const handleDownloadPDF = useCallback(async () => {
     if (onDownloadPDF) {
-      await onDownloadPDF();
+      // Capture latest chart images before download
+      await captureChartImages();
+      await onDownloadPDF(chartImages);
     } else if (reportData) {
       try {
         await generatePDF(reportData, intl);
@@ -165,7 +214,7 @@ export function A4ReportPreview({
         console.error('Error generating PDF:', error);
       }
     }
-  }, [onDownloadPDF, reportData, intl]);
+  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -622,7 +671,13 @@ export function A4ReportPreview({
                     
                     {/* Increased chart height with reduced padding */}
                     <div className="h-52">
-                      <Bar data={point.graphData} options={{
+                      <Bar
+                        ref={(ref) => {
+                          if (ref) {
+                            registerChart(point.id, ref);
+                          }
+                        }}
+                        data={point.graphData} options={{
                         ...point.graphOptions,
                         layout: {
                           padding: {

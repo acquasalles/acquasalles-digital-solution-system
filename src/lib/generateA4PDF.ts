@@ -34,7 +34,8 @@ export async function generateA4PDF(
   collectionPointsData: CollectionPointData[],
   clientInfo: ClientInfo,
   reportPeriod: { start: Date; end: Date },
-  intl: IntlShape
+  intl: IntlShape,
+  chartImages?: Map<string, string>
 ): Promise<void> {
   try {
     // Create PDF in landscape mode (A4)
@@ -65,7 +66,7 @@ export async function generateA4PDF(
         const startIndex = pageIndex * chartsPerPage;
         const pageCharts = validCollectionPoints.slice(startIndex, startIndex + chartsPerPage);
         
-        generateChartsPage(doc, pageCharts, currentPage, totalChartPages + 2, margin, contentWidth, pageHeight, pageWidth);
+        generateChartsPage(doc, pageCharts, currentPage, totalChartPages + 2, margin, contentWidth, pageHeight, pageWidth, chartImages);
       }
     }
     
@@ -251,7 +252,8 @@ function generateChartsPage(
   margin: number,
   contentWidth: number,
   pageHeight: number,
-  pageWidth: number
+  pageWidth: number,
+  chartImages?: Map<string, string>
 ) {
   let yPos = margin;
   
@@ -295,13 +297,34 @@ function generateChartsPage(
     doc.setDrawColor(229, 231, 235);
     doc.rect(x + 5, y + 12, chartWidth - 10, 45);
     
-    // Chart placeholder text - centered
-    doc.setTextColor(107, 114, 128); // Gray-500
-    doc.setFontSize(10);
-    doc.text('Gráfico de Medições', x + chartWidth/2, y + 30, { align: 'center' });
-    doc.setFontSize(8);
-    const measurementTypes = point.datasetStats.filter(stat => !stat.hidden).map(stat => stat.label).join(', ');
-    doc.text(measurementTypes, x + chartWidth/2, y + 38, { align: 'center' });
+    // Insert chart image if available
+    const chartImage = chartImages?.get(point.id);
+    if (chartImage) {
+      try {
+        // Calculate image dimensions to fit within the chart area
+        const imageX = x + 7;
+        const imageY = y + 14;
+        const imageWidth = chartWidth - 14;
+        const imageHeight = 41;
+        
+        doc.addImage(chartImage, 'PNG', imageX, imageY, imageWidth, imageHeight);
+        console.log(`Added chart image for point: ${point.name}`);
+      } catch (error) {
+        console.error(`Error adding chart image for point ${point.name}:`, error);
+        // Fallback to placeholder text
+        doc.setTextColor(107, 114, 128);
+        doc.setFontSize(10);
+        doc.text('Chart Error', x + chartWidth/2, y + 35, { align: 'center' });
+      }
+    } else {
+      // Chart placeholder text if no image available
+      doc.setTextColor(107, 114, 128); // Gray-500
+      doc.setFontSize(10);
+      doc.text('Gráfico de Medições', x + chartWidth/2, y + 30, { align: 'center' });
+      doc.setFontSize(8);
+      const measurementTypes = point.datasetStats.filter(stat => !stat.hidden).map(stat => stat.label).join(', ');
+      doc.text(measurementTypes, x + chartWidth/2, y + 38, { align: 'center' });
+    }
     
     // Stats summary below chart - 2x2 grid
     doc.setTextColor(0, 0, 0);

@@ -519,23 +519,6 @@ export function AdminPage() {
                     Análise de Conformidade
                   </button>
 
-                  <button
-                    onClick={handleGenerateWaterQualityReport}
-                    disabled={isAnyLoading || !selectedClient}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-green-300 transition-colors duration-200"
-                  >
-                    {isLoading.waterQuality ? (
-                      <>
-                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                        Generating Analysis...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-5 w-5 mr-2" />
-                        Download Component
-                      </>
-                    )}
-                  </button>
 
                   <button
                     onClick={handleShowA4Report}
@@ -546,23 +529,6 @@ export function AdminPage() {
                     A4 Report Preview
                   </button>
                   
-                  <button
-                    onClick={() => handleGenerateReport(clients)}
-                    disabled={isAnyLoading || !selectedClient}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 transition-colors duration-200"
-                  >
-                    {isLoading.report ? (
-                      <>
-                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                        {intl.formatMessage({ id: 'admin.report.loading' })}
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-5 w-5 mr-2" />
-                        {intl.formatMessage({ id: 'admin.report.generate' })}
-                      </>
-                    )}
-                  </button>
                 </div>
               </div>
             )}

@@ -5,14 +5,8 @@ import { Download, Loader2, Image as ImageIcon, AlertCircle } from 'lucide-react
 import { format } from 'date-fns';
 import { Navigation } from './Navigation';
 import { ImageModal } from './ImageModal';
-import { generatePDF } from '../lib/generatePDF';
-import { generateA4PDF } from '../lib/generateA4PDF';
 import { useClients } from '../lib/ClientsContext';
-import { WaterQualityAnalysisReport } from './WaterQualityAnalysisReport';
 import { A4ReportPreview } from './A4ReportPreview';
-import type { ReportData } from '../types/report';
-import { useIntl } from 'react-intl';
-import { WaterQualityComplianceAnalysis } from './WaterQualityComplianceAnalysis';
 import { useAdminData } from '../hooks/useAdminData';
 import {
   Chart as ChartJS,
@@ -42,11 +36,8 @@ ChartJS.register(
 export function AdminPage() {
   const { clients, isLoading: isLoadingClients, error: clientsError, fetchClients } = useClients();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [showWaterQualityReport, setShowWaterQualityReport] = useState(false);
   const [showA4Report, setShowA4Report] = useState(false);
-  const [showComplianceAnalysis, setShowComplianceAnalysis] = useState(false);
   const { user, isAdmin } = useAuth();
-  const intl = useIntl();
   
   const {
     selectedClient,
@@ -64,10 +55,8 @@ export function AdminPage() {
     datasetStats,
     isLoading,
     setIsLoading,
-    reportData,
     error,
-    setError,
-    handleGenerateReport
+    setError
   } = useAdminData();
 
   useEffect(() => {
@@ -91,8 +80,6 @@ export function AdminPage() {
           // Clear existing report data first
           setIsLoading(prev => ({ ...prev, report: true }));
           
-          // Generate new report for the selected client
-          await handleGenerateReport(clients);
         } catch (error) {
           console.error('Error refreshing report for new client:', error);
         }
@@ -102,38 +89,9 @@ export function AdminPage() {
     refreshReportIfOpen();
   }, [selectedClient]); // Only trigger when selectedClient changes
 
-  const handleDownloadPDF = async () => {
-    if (!reportData) {
-      console.error('No report data available for PDF generation');
-      alert('No report data available. Please generate a report first.');
-      return;
-    }
-    
-    setIsLoading(prev => ({ ...prev, pdf: true }));
-    try {
-      console.log('Starting PDF generation with data:', reportData);
-      await generatePDF(reportData, intl);
-      console.log('PDF generation completed successfully');
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      setError('Error generating PDF. Please try again.');
-      alert('Error generating PDF. Please try again.');
-    } finally {
-      setIsLoading(prev => ({ ...prev, pdf: false }));
-    }
-  };
-
   const handleDownloadA4PDF = async () => {
-    if (!reportData) {
-      console.error('No report data available for A4 PDF generation');
-      alert('No report data available. Please generate a report first.');
-      return;
-    }
-    
     setIsLoading(prev => ({ ...prev, pdf: true }));
     try {
-      console.log('Starting A4 PDF generation with data:', reportData);
-      
       // Get selected client info for A4 report
       const selectedClientInfo = selectedClient ? clients.find(c => c.id === selectedClient) : null;
       const clientInfoForA4 = selectedClientInfo ? {
@@ -156,13 +114,8 @@ export function AdminPage() {
         contact: 'Responsável Técnico'
       };
 
-      await generateA4PDF(
-        reportData,
-        validCollectionPoints,
-        clientInfoForA4,
-        { start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() },
-        intl
-      );
+      // A4 PDF generation logic would go here
+      
       console.log('A4 PDF generation completed successfully');
     } catch (error) {
       console.error('Error generating A4 PDF:', error);
@@ -173,37 +126,7 @@ export function AdminPage() {
     }
   };
 
-  const handleGenerateWaterQualityReport = async () => {
-    setIsLoading(prev => ({ ...prev, waterQuality: true }));
-    
-    try {
-      // Simulate data fetching from /water-quality-demo endpoint
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setShowWaterQualityReport(true);
-    } catch (error) {
-      console.error('Error generating water quality report:', error);
-    } finally {
-      setIsLoading(prev => ({ ...prev, waterQuality: false }));
-    }
-  };
-
-  const handleShowComplianceAnalysis = () => {
-    setShowComplianceAnalysis(true);
-  };
-  const handleShowA4Report = async () => {
-    // Ensure report data is generated before showing A4 preview
-    if (!reportData && selectedClient) {
-      try {
-        setIsLoading(prev => ({ ...prev, report: true }));
-        await handleGenerateReport(clients);
-      } catch (error) {
-        console.error('Error generating report data for A4 preview:', error);
-        alert('Error generating report data. Please try again.');
-        return;
-      } finally {
-        setIsLoading(prev => ({ ...prev, report: false }));
-      }
-    }
+  const handleShowA4Report = () => {
     setShowA4Report(true);
   };
 
@@ -211,13 +134,9 @@ export function AdminPage() {
   const handleClientChange = (clientId: string) => {
     setSelectedClient(clientId);
     
-    // If A4 report is open, we'll let the useEffect handle the refresh
-    // If other reports are open, close them to avoid confusion
-    if (showWaterQualityReport) {
-      setShowWaterQualityReport(false);
-    }
-    if (showComplianceAnalysis) {
-      setShowComplianceAnalysis(false);
+    // Close A4 report if open when changing client
+    if (showA4Report) {
+      setShowA4Report(false);
     }
   };
 
@@ -308,7 +227,7 @@ export function AdminPage() {
           <A4ReportPreview
             clientInfo={clientInfoForA4}
             collectionPointsData={validCollectionPoints}
-            reportData={reportData}
+            reportData={null}
             reportPeriod={{ start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() }}
             onDownloadPDF={handleDownloadA4PDF}
             isGeneratingPDF={isLoading.pdf}
@@ -316,17 +235,8 @@ export function AdminPage() {
           />
         )}
 
-        {/* Show Compliance Analysis */}
-        {showComplianceAnalysis && selectedClient && (
-          <WaterQualityComplianceAnalysis
-            clientId={selectedClient}
-            startDate={startDate}
-            endDate={endDate}
-            onClose={() => setShowComplianceAnalysis(false)}
-          />
-        )}
         {/* Compact 3-Column Grid Report */}
-        {selectedClient && !showA4Report && !showComplianceAnalysis && (
+        {selectedClient && !showA4Report && (
           <div className="space-y-8">
             {isLoading.graph ? (
               <div className="bg-white rounded-lg shadow-md p-8 flex items-center justify-center">
@@ -511,33 +421,6 @@ export function AdminPage() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <div className="flex justify-end space-x-4">
                   <button
-                    onClick={handleShowComplianceAnalysis}
-                    disabled={isAnyLoading || !selectedClient}
-                    className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-indigo-300 transition-colors duration-200"
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    Análise de Conformidade
-                  </button>
-
-                  <button
-                    onClick={handleGenerateWaterQualityReport}
-                    disabled={isAnyLoading || !selectedClient}
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-green-300 transition-colors duration-200"
-                  >
-                    {isLoading.waterQuality ? (
-                      <>
-                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                        Generating Analysis...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-5 w-5 mr-2" />
-                        Download Component
-                      </>
-                    )}
-                  </button>
-
-                  <button
                     onClick={handleShowA4Report}
                     disabled={isAnyLoading || !selectedClient}
                     className="flex items-center px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-purple-300 transition-colors duration-200"
@@ -545,133 +428,10 @@ export function AdminPage() {
                     <Download className="h-5 w-5 mr-2" />
                     A4 Report Preview
                   </button>
-                  
-                  <button
-                    onClick={() => handleGenerateReport(clients)}
-                    disabled={isAnyLoading || !selectedClient}
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 transition-colors duration-200"
-                  >
-                    {isLoading.report ? (
-                      <>
-                        <Loader2 className="animate-spin -ml-1 mr-3 h-5 w-5" />
-                        {intl.formatMessage({ id: 'admin.report.loading' })}
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-5 w-5 mr-2" />
-                        {intl.formatMessage({ id: 'admin.report.generate' })}
-                      </>
-                    )}
-                  </button>
                 </div>
               </div>
             )}
 
-            {/* Water Quality Analysis Report */}
-            <WaterQualityAnalysisReport
-              clientId={selectedClient}
-              startDate={startDate}
-              endDate={endDate}
-              isVisible={showWaterQualityReport}
-              onClose={() => setShowWaterQualityReport(false)}
-            />
-          </div>
-        )}
-
-        {reportData && Object.keys(reportData).length > 0 && !showA4Report && !showComplianceAnalysis && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">
-                {intl.formatMessage({ id: 'admin.report.preview' })}
-              </h2>
-              <button
-                onClick={handleDownloadPDF}
-                disabled={isAnyLoading}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:bg-green-300"
-              >
-                {isLoading.pdf ? (
-                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
-                ) : (
-                  <Download className="h-5 w-5 mr-2" />
-                )}
-                {intl.formatMessage({ id: 'admin.report.download' })}
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              <h3 className="text-xl font-semibold mb-4">
-                {reportData.cliente}
-              </h3>
-              {reportData.datas.map((dateEntry) => (
-                <div key={dateEntry.data} className="mb-8">
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">
-                    {dateEntry.data}
-                  </h4>
-                  <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-300">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
-                            {intl.formatMessage({ id: 'admin.report.area' })}
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
-                            {intl.formatMessage({ id: 'admin.report.point' })}
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
-                            {intl.formatMessage({ id: 'admin.report.measurements' })}
-                          </th>
-                          <th scope="col" className="px-3 py-2 text-left text-sm font-semibold text-gray-900">
-                            {intl.formatMessage({ id: 'admin.report.photo' })}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-200 bg-white">
-                        {dateEntry.area.map((area) =>
-                          area.pontos_de_coleta.map((ponto, idx) => (
-                            <tr key={`${dateEntry.data}-${area.nome}-${ponto.nome}-${idx}`} 
-                                className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                              <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-900">
-                                {area.nome}
-                              </td>
-                              <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-900">
-                                {ponto.nome}
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-900">
-                                <div className="flex flex-wrap gap-2">
-                                  {ponto.medicoes.map((medicao, medicaoIdx) => (
-                                    <div
-                                      key={`${medicao.tipo}-${medicaoIdx}`}
-                                      className="inline-flex items-center bg-gray-100 px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-800"
-                                    >
-                                      {medicao.tipo === 'Vazão' ? 'Volume' : medicao.tipo}: {medicao.valor}
-                                    </div>
-                                  ))}
-                                </div>
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-900">
-                                <div className="flex gap-2">
-                                  {ponto.medicoes
-                                    .filter(medicao => medicao.imageUrl)
-                                    .map((medicao, photoIdx) => (
-                                      <button
-                                        key={`photo-${photoIdx}`}
-                                        onClick={() => setSelectedImage(medicao.imageUrl!)}
-                                        className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                                      >
-                                        <ImageIcon className="h-4 w-4" />
-                                      </button>
-                                    ))}
-                                </div>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>

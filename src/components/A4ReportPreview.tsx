@@ -206,6 +206,7 @@ export function A4ReportPreview({
     if (onDownloadPDF) {
       // Capture latest chart images before download
       await captureChartImages();
+      console.log(`Captured ${chartImages.size} chart images for PDF generation`);
       await onDownloadPDF(chartImages);
     } else if (reportData) {
       try {
@@ -216,6 +217,17 @@ export function A4ReportPreview({
     }
   }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
 
+  // Effect to capture chart images when page changes to charts
+  useEffect(() => {
+    if (currentPage > 1 && currentPage <= 1 + totalChartPages && validCollectionPoints.length > 0) {
+      const timer = setTimeout(() => {
+        captureChartImages();
+      }, 1500); // Increased delay to ensure charts are fully rendered
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentPage, validCollectionPoints, totalChartPages, captureChartImages]);
+  
   const getStatusColor = (status?: string) => {
     switch (status) {
       case 'normal':

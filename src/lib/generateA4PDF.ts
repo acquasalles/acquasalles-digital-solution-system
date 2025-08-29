@@ -37,7 +37,7 @@ export async function generateA4PDF(
   reportPeriod: { start: Date; end: Date },
   intl: IntlShape,
   chartImages?: Map<string, string>,
-  realAnalysis?: ComplianceAnalysis | null
+  realAnalysis?: ComplianceAnalysis
 ): Promise<void> {
   try {
     // Create PDF in landscape mode (A4)
@@ -50,7 +50,7 @@ export async function generateA4PDF(
     let currentPage = 1;
     
     // Page 1: Client Information and Summary
-    generateClientInfoPage(doc, clientInfo, reportPeriod, collectionPointsData, reportData, margin, contentWidth, pageHeight, pageWidth, realAnalysis);
+    generateClientInfoPage(doc, clientInfo, reportPeriod, collectionPointsData, reportData, margin, contentWidth, pageHeight, pageWidth);
     
     // Chart Pages - 6 charts per page (3x2 grid)
     const chartsPerPage = 6;
@@ -99,7 +99,7 @@ function generateClientInfoPage(
   contentWidth: number,
   pageHeight: number,
   pageWidth: number,
-  realAnalysis?: ComplianceAnalysis | null
+  realAnalysis?: ComplianceAnalysis
 ) {
   let yPos = margin;
   

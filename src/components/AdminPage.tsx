@@ -164,7 +164,7 @@ export function AdminPage() {
         { start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() },
         intl,
         chartImages,
-        undefined // Removed realAnalysis to avoid reference issues
+        realAnalysis
       );
       console.log('A4 PDF generation completed successfully');
     } catch (error) {

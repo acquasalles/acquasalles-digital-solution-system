@@ -163,8 +163,7 @@ export function AdminPage() {
         clientInfoForA4,
         { start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() },
         intl,
-        chartImages,
-        realAnalysis
+        chartImages
       );
       console.log('A4 PDF generation completed successfully');
     } catch (error) {

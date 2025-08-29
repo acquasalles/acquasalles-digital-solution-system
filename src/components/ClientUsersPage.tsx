@@ -68,7 +68,8 @@ export function ClientUsersPage() {
       // Fetch clients
       const { data: clientsData, error: clientsError } = await supabase
         .from('clientes')
-        .select('id, razao_social');
+        .select('id, razao_social')
+       .order('razao_social', { ascending: true })
       
       if (clientsError) throw clientsError;
 

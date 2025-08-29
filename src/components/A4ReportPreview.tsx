@@ -7,8 +7,6 @@ import { useIntl } from 'react-intl';
 import type { ReportData } from '../types/report';
 import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
 import type { ComplianceAnalysis } from '../types/waterQuality';
-import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
-import type { ComplianceAnalysis } from '../types/waterQuality';
 import type { Chart } from 'chart.js';
 
 interface ClientInfo {

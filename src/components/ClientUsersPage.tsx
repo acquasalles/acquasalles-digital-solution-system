@@ -183,7 +183,7 @@ export function ClientUsersPage() {
       const { error } = await supabase
         .rpc('update_user_role', { 
           target_user_id: userId, 
-          new_role: newRole 
+          new_role: newRole ? 'admin' : 'user'
         });
 
       if (error) throw error;

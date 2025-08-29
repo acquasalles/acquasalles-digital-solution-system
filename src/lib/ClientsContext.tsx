@@ -85,6 +85,12 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
       } else {
         console.log('Fetching assigned clients for regular user');
         // Regular users can only see assigned clients via client_users
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user?.id) {
+          throw new Error('User not authenticated');
+        }
+        
         const { data: assignedClients, error: assignedError } = await supabase
           .from('client_users')
           .select(`
@@ -94,7 +100,7 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
               cidade
             )
           `)
-          .eq('user_id', supabase.auth.getUser().then(u => u.data.user?.id));
+          .eq('user_id', user.id);
 
         if (assignedError) throw assignedError;
 

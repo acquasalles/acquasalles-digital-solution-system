@@ -49,6 +49,14 @@ export async function generateA4PDF(
     
     let currentPage = 1;
     
+    console.log('Starting PDF generation with:', {
+      reportData: !!reportData,
+      collectionPointsData: collectionPointsData.length,
+      chartImages: chartImages ? chartImages.size : 0,
+      clientInfo,
+      reportPeriod
+    });
+
     // Page 1: Client Information and Summary
     generateClientInfoPage(doc, clientInfo, reportPeriod, collectionPointsData, reportData, margin, contentWidth, pageHeight, pageWidth);
     
@@ -58,6 +66,8 @@ export async function generateA4PDF(
       point => point.datasetStats && point.datasetStats.length > 0
     );
     
+    console.log('Valid collection points for charts:', validCollectionPoints.length);
+
     if (validCollectionPoints.length > 0) {
       const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
       
@@ -68,6 +78,7 @@ export async function generateA4PDF(
         const startIndex = pageIndex * chartsPerPage;
         const pageCharts = validCollectionPoints.slice(startIndex, startIndex + chartsPerPage);
         
+        console.log(`Generating chart page ${pageIndex + 1} with ${pageCharts.length} charts`);
         generateChartsPage(doc, pageCharts, currentPage, totalChartPages + 2, margin, contentWidth, pageHeight, pageWidth, chartImages, intl);
       }
     }
@@ -82,6 +93,7 @@ export async function generateA4PDF(
     
     // Save the PDF
     const fileName = `A4_Report_${clientInfo.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
+    console.log('PDF generation completed successfully:', fileName);
     doc.save(fileName);
   } catch (error) {
     console.error('Error in generateA4PDF:', error);
@@ -395,6 +407,8 @@ function generateChartsPage(
   // Page Header
   intl?: IntlShape
 ) {
+  console.log(`Generating charts page with ${pageCharts.length} charts, chartImages: ${chartImages ? chartImages.size : 0}`);
+
   let yPos = margin;
   
   // Page Header with exact styling
@@ -439,6 +453,8 @@ function generateChartsPage(
     
     // Try to insert chart image if available
     const chartImage = chartImages?.get(point.id);
+    console.log(`Looking for chart image for point ${point.name} (ID: ${point.id}):`, !!chartImage);
+    
     if (chartImage) {
       try {
         console.log(`Adding chart image for point: ${point.name} (ID: ${point.id})`);
@@ -452,6 +468,11 @@ function generateChartsPage(
         // Remove data:image/png;base64, prefix if present
         const cleanBase64 = chartImage.replace(/^data:image\/[a-z]+;base64,/, '');
         
+        // Validate base64 string
+        if (!cleanBase64 || cleanBase64.length < 100) {
+          throw new Error('Invalid or empty base64 image data');
+        }
+
         doc.addImage(cleanBase64, 'PNG', imageX, imageY, imageWidth, imageHeight, undefined, 'FAST');
         console.log(`Successfully added chart image for point: ${point.name}`);
       } catch (error) {
@@ -462,6 +483,7 @@ function generateChartsPage(
         doc.setFontSize(8);
         doc.text('Gráfico não disponível', x + chartWidth/2, y + 30, { align: 'center' });
         doc.text('(erro ao carregar)', x + chartWidth/2, y + 37, { align: 'center' });
+        doc.setTextColor(0, 0, 0);
       }
     } else {
       console.log(`No chart image available for point: ${point.name} (ID: ${point.id})`);
@@ -480,6 +502,7 @@ function generateChartsPage(
       if (measurementTypes) {
         doc.text(measurementTypes, x + chartWidth/2, y + 35, { align: 'center' });
       }
+      doc.setTextColor(0, 0, 0);
     }
     
     // Stats summary below chart

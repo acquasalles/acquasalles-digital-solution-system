@@ -7,6 +7,8 @@ import { useIntl } from 'react-intl';
 import type { ReportData } from '../types/report';
 import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
 import type { ComplianceAnalysis } from '../types/waterQuality';
+import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
+import type { ComplianceAnalysis } from '../types/waterQuality';
 import type { Chart } from 'chart.js';
 
 interface ClientInfo {
@@ -78,12 +80,41 @@ export function A4ReportPreview({
   const [chartImages, setChartImages] = useState<Map<string, string>>(new Map());
   const chartRefs = useRef<Map<string, Chart>>(new Map());
   const reportRef = useRef<HTMLDivElement>(null);
+  const [realAnalysis, setRealAnalysis] = useState<ComplianceAnalysis | null>(null);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const intl = useIntl();
 
+  // Load real water quality data for accurate statistics
+  useEffect(() => {
+    if (clientId && reportPeriod) {
+      const loadRealData = async () => {
+        setIsLoadingAnalysis(true);
+        try {
+          const startDateString = format(reportPeriod.start, 'yyyy-MM-dd');
+          const endDateString = format(reportPeriod.end, 'yyyy-MM-dd');
+          
+          const waterQualityData = await fetchWaterQualityData(clientId, startDateString, endDateString);
+          const complianceAnalysis = generateComplianceAnalysis(waterQualityData);
+          setRealAnalysis(complianceAnalysis);
+          
+          console.log('Real analysis loaded:', complianceAnalysis);
+        } catch (error) {
+          console.error('Error loading real water quality data:', error);
+          // Use default analysis on error
+          setRealAnalysis(null);
+        } finally {
+          setIsLoadingAnalysis(false);
+        }
+      };
+      
+      loadRealData();
+    }
+  }, [clientId, reportPeriod]);
   // Function to register chart reference
   const registerChart = useCallback((pointId: string, chartInstance: Chart | null) => {
     if (chartInstance) {
       chartRefs.current.set(pointId, chartInstance);
+      console.log(`Chart registered for point: ${pointId}`);
     } else {
       chartRefs.current.delete(pointId);
     }
@@ -94,11 +125,19 @@ export function A4ReportPreview({
     const newChartImages = new Map<string, string>();
     
     // Wait a bit for charts to fully render
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    console.log(`Attempting to capture ${chartRefs.current.size} chart images...`);
     
     for (const [pointId, chartInstance] of chartRefs.current.entries()) {
       try {
         if (chartInstance && chartInstance.canvas) {
+          // Force chart update before capture
+          chartInstance.update();
+          
+          // Wait a bit more after update
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
           const base64Image = chartInstance.toBase64Image('image/png', 1.0);
           newChartImages.set(pointId, base64Image);
           console.log(`Captured chart image for point: ${pointId}`);
@@ -110,48 +149,21 @@ export function A4ReportPreview({
     
     setChartImages(newChartImages);
     console.log(`Total chart images captured: ${newChartImages.size}`);
+    return newChartImages;
   }, []);
 
-  // Capture chart images when collection points data changes or current page changes
+  // Capture chart images when charts are visible
   useEffect(() => {
-    if (collectionPointsData.length > 0 && currentPage > 1) {
+    if (collectionPointsData.length > 0 && currentPage > 1 && currentPage <= 1 + totalChartPages) {
       // Delay capture to ensure charts are rendered
       const timer = setTimeout(() => {
+        console.log('Auto-capturing charts due to page change...');
         captureChartImages();
-      }, 1000);
+      }, 2000);
       
       return () => clearTimeout(timer);
     }
-  }, [collectionPointsData, currentPage, captureChartImages]);
-
-  // Calculate statistics from available data
-  const stats = useMemo(() => {
-    return {
-      totalCollectionPoints: collectionPointsData.length,
-      totalMeasurementDays: reportData?.datas.length || 0,
-      totalParameters: collectionPointsData.reduce((acc, point) => 
-        acc + point.datasetStats.filter(stat => !stat.hidden).length, 0
-      ),
-      daysAnalyzed: Math.round((reportPeriod.end.getTime() - reportPeriod.start.getTime()) / (1000 * 60 * 60 * 24)),
-      criticalAlerts: 0,
-      warnings: 2
-    };
-  }, [collectionPointsData, reportData, reportPeriod]);
-
-  const handleDownloadPDF = useCallback(async () => {
-    if (onDownloadPDF) {
-      // Capture latest chart images before download
-      await captureChartImages();
-      console.log(`Captured ${chartImages.size} chart images for PDF generation`);
-      await onDownloadPDF(chartImages);
-    } else if (reportData) {
-      try {
-        await generatePDF(reportData, intl);
-      } catch (error) {
-        console.error('Error generating PDF:', error);
-      }
-    }
-  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
+  }, [collectionPointsData, currentPage, captureChartImages, totalChartPages]);
 
   // Filter valid collection points with data
   const validCollectionPoints = collectionPointsData.filter(
@@ -162,11 +174,71 @@ export function A4ReportPreview({
   const chartsPerPage = 6;
   const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
   const totalPages = 1 + totalChartPages + (reportData ? 1 : 0); // Client info + Chart pages + Table page (if reportData exists)
+  // Calculate statistics from available data
+  const stats = useMemo(() => {
+    if (realAnalysis) {
+      // Use real analysis data when available
+      const uniqueCollectionPoints = collectionPointsData.length;
+      const totalDaysWithMeasurements = reportData?.datas.length || 0;
+      const totalParameters = Object.entries(realAnalysis.parameterStats).reduce((sum, [key, stat]) => {
+        return sum + (stat.totalMeasurements > 0 ? 1 : 0);
+      }, 0);
+      const criticalIssues = Object.entries(realAnalysis.parameterStats).reduce((sum, [key, stat]) => {
+        const criticalCount = stat.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length;
+        return sum + criticalCount;
+      }, 0);
+      const warnings = Object.entries(realAnalysis.parameterStats).reduce((sum, [key, stat]) => {
+        const warningCount = stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length;
+        return sum + warningCount;
+      }, 0);
+
+      return {
+        totalCollectionPoints: uniqueCollectionPoints,
+        totalMeasurementDays: totalDaysWithMeasurements,
+        totalParameters,
+        daysAnalyzed: Math.round((reportPeriod.end.getTime() - reportPeriod.start.getTime()) / (1000 * 60 * 60 * 24)),
+        criticalAlerts: criticalIssues,
+        warnings,
+        complianceRate: realAnalysis.complianceRate
+      };
+    }
+    
+    // Fallback to calculated data
+    return {
+      totalCollectionPoints: collectionPointsData.length,
+      totalMeasurementDays: reportData?.datas.length || 0,
+      totalParameters: collectionPointsData.reduce((acc, point) => 
+        acc + point.datasetStats.filter(stat => !stat.hidden).length, 0
+      ),
+      daysAnalyzed: Math.round((reportPeriod.end.getTime() - reportPeriod.start.getTime()) / (1000 * 60 * 60 * 24)),
+      criticalAlerts: 0,
+      warnings: 2,
+      complianceRate: 87.5
+    };
+  }, [collectionPointsData, reportData, reportPeriod, realAnalysis]);
+
+  const handleDownloadPDF = useCallback(async () => {
+    if (onDownloadPDF) {
+      // Capture latest chart images before download
+      console.log('Capturing chart images before PDF generation...');
+      const latestChartImages = await captureChartImages();
+      console.log(`Captured ${chartImages.size} chart images for PDF generation`);
+      await onDownloadPDF(latestChartImages.size > 0 ? latestChartImages : chartImages);
+    } else if (reportData) {
+      try {
+        await generatePDF(reportData, intl);
+      } catch (error) {
+        console.error('Error generating PDF:', error);
+      }
+    }
+  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
+
 
   // Effect to capture chart images when page changes to charts
   useEffect(() => {
     if (currentPage > 1 && currentPage <= 1 + totalChartPages && validCollectionPoints.length > 0) {
       const timer = setTimeout(() => {
+        console.log('Page changed to charts, capturing images...');
         captureChartImages();
       }, 1500); // Increased delay to ensure charts are fully rendered
       
@@ -330,6 +402,12 @@ export function A4ReportPreview({
               <div className="text-sm text-gray-600">
                 Página {currentPage} de {totalPages}
               </div>
+              {isLoadingAnalysis && (
+                <div className="flex items-center space-x-2 text-sm text-blue-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Carregando dados reais...</span>
+                </div>
+              )}
             </div>
             
             <div className="flex items-center space-x-3">
@@ -482,16 +560,26 @@ export function A4ReportPreview({
                     <div className="text-xs text-gray-600">Parâmetros</div>
                   </div>
                   <div className="bg-white p-2 rounded-lg">
-                    <div className="text-lg font-bold text-orange-600">87.5%</div>
+                    <div className="text-lg font-bold text-orange-600">{stats.complianceRate}%</div>
                     <div className="text-xs text-gray-600">Taxa Conformidade</div>
                   </div>
                 </div>
               </div>
 
-              {/* Sample data indicator */}
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-                <div className="text-xs text-blue-700 text-center">
-                  <span className="font-medium">Visualização A4 com dados de exemplo</span>
+              {/* Data source indicator */}
+              <div className={`p-3 rounded-lg border mb-4 ${realAnalysis ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
+                <div className={`text-xs text-center ${realAnalysis ? 'text-green-700' : 'text-orange-700'}`}>
+                  {realAnalysis ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 inline mr-1" />
+                      <span className="font-medium">✓ Usando dados reais da análise de conformidade</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertTriangle className="h-4 w-4 inline mr-1" />
+                      <span className="font-medium">Visualização A4 com dados de exemplo</span>
+                    </>
+                  )}
                 </div>
               </div>
 

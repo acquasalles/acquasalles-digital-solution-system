@@ -24,6 +24,7 @@ interface ClientInfo {
   name: string;
   cnpj: string;
   address: string;
+  bairro?: string;
   city: string;
   state: string;
   phone: string;

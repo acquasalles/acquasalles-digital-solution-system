@@ -227,10 +227,12 @@ export function AdminPage() {
   const selectedClientInfo = selectedClient ? clients.find(c => c.id === selectedClient) : null;
   const clientInfoForA4 = selectedClientInfo ? {
     name: selectedClientInfo.razao_social || 'Cliente',
-    cnpj: '16.716.417/0001-95', // Default CNPJ
-    address: 'Endereço não informado',
+    cnpj: selectedClientInfo.cnpj_cpf || '16.716.417/0001-95',
+    address: selectedClientInfo.endereco || 'Endereço não informado',
+    neighborhood: selectedClientInfo.nome_bairro || '',
+    cep: selectedClientInfo.cep || '',
     city: selectedClientInfo.cidade || 'Cidade',
-    state: 'SP',
+    state: selectedClientInfo.uf || 'SP',
     phone: '+55 (11) 1234-5678',
     email: 'contato@cliente.com.br',
     contact: 'Responsável Técnico'

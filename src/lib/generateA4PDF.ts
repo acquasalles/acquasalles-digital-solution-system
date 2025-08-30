@@ -86,7 +86,8 @@ export async function generateA4PDF(
       realAnalysis
     );
     
-    // Chart Pages - 6 charts per page (3x2 grid)
+    // Skip chart pages - go directly to table page
+    
     const chartsPerPage = 6;
     
     if (validCollectionPoints.length > 0) {

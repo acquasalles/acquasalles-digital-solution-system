@@ -498,9 +498,12 @@ function generateClientInfoPage(
   // Footer - exact positioning as preview
   yPos = pageHeight - 15;
   doc.setFontSize(10);
-  doc.setTextColor(107, 114, 128); // text-gray-500
+  // Footer - exact positioning from preview
+  yPos = pageHeight - 12;
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128); // text-gray-500 (#6B7280)
   doc.text('Este relatório foi gerado automaticamente pelo Sistema de Monitoramento ACQUASALLES', margin, yPos);
-  doc.text(`Página 1 de ${Math.ceil(validCollectionPoints.length / 6) + 2} | Formato Paisagem (297mm x 210mm)`, margin, yPos + 6);
+  doc.text(`Página 1 de 2 | Formato Paisagem (297mm x 210mm)`, margin, yPos + 5);
 }
 
 function generateChartsPage(
@@ -584,21 +587,21 @@ function generateChartsPage(
         console.log(`Successfully added chart image for ${point.name}`);
       } catch (error) {
         console.error(`Error adding chart image for point ${point.name}:`, error);
-        // Fallback to placeholder text
-        doc.setTextColor(107, 114, 128);
-        doc.setFontSize(11);
+        doc.setFillColor(252, 165, 165); // bg-red-200
+        doc.rect(margin + 5, tableEndY, contentWidth - 10, 8, 'F');
+        doc.setFontSize(8);
         doc.text('Gráfico Indisponível', x + chartWidth/2, y + 50, { align: 'center' });
       }
     } else {
       // Chart placeholder text - exact styling as preview
       doc.setTextColor(107, 114, 128); // text-gray-500
       doc.setFontSize(10);
-      doc.text('Gráfico de Medições', x + chartWidth/2, y + 45, { align: 'center' });
+          tableEndY + 5,
       doc.setFontSize(8);
       const measurementTypes = point.datasetStats.filter(stat => !stat.hidden).map(stat => stat.label).join(', ');
-      const typeLines = doc.splitTextToSize(measurementTypes, chartWidth - 20);
+        yPos = tableEndY + 15;
       typeLines.slice(0, 2).forEach((line: string, lineIndex: number) => {
-        doc.text(line, x + chartWidth/2, y + 55 + (lineIndex * 5), { align: 'center' });
+        yPos = (doc as any).lastAutoTable.finalY + 10;
       });
     }
     
@@ -697,48 +700,44 @@ function generateTablePage(
         { 
           fillColor: [34, 197, 94], // Green-500 for main headers
           textColor: [255, 255, 255], 
-          fontStyle: 'bold', 
-          fontSize: 12,
-          halign: 'center',
-          cellPadding: 4
+    doc.setFillColor(240, 253, 244); // bg-green-50 (#F0FDF4)
+    doc.rect(margin, yPos, contentWidth, 25, 'F');
+    doc.setDrawColor(134, 239, 172); // border-green-200 (#86EFAC)
+    doc.rect(margin, yPos, contentWidth, 25);
         },
-        { 
+    doc.setFontSize(12);
           fillColor: [34, 197, 94], // Green-500 for sub headers
-          textColor: [255, 255, 255], 
-          fontStyle: 'normal', 
+    doc.setTextColor(21, 128, 61); // text-green-800 (#15803D)
+    doc.text('Dados Reais Carregados', margin + 5, yPos + 10);
           fontSize: 10,
           halign: 'center',
-          cellPadding: 3
-        }
-      ],
-      bodyStyles: { 
-        fontSize: 9, 
+    doc.setFontSize(9);
+    doc.setTextColor(22, 101, 52); // text-green-700 (#166534)
+    const statsText = `Total de Amostras: ${realAnalysis.totalSamples}     Taxa de Conformidade: ${realAnalysis.complianceRate.toFixed(1)}%     Parâmetros Monitorados: ${realStats.totalParameters}`;
+    doc.text(statsText, margin + 5, yPos + 18);
         cellPadding: 3,
-        halign: 'center',
+    yPos += 35;
         alternateRowStyles: { fillColor: [249, 250, 251] } // bg-gray-50
       },
-      columnStyles: {
-        0: { cellWidth: 30, fontStyle: 'bold', halign: 'center' }
-      },
-      theme: 'grid',
-      tableWidth: 'auto',
+  // Data source indicator - exact styling from preview
+  doc.setFillColor(255, 255, 255); // white background like in preview
+  doc.rect(margin, yPos, contentWidth, 15, 'F');
+  doc.setDrawColor(226, 232, 240); // border-slate-200
+  doc.rect(margin, yPos, contentWidth, 15);
       margin: { left: margin, right: margin },
-      styles: {
+  doc.setFontSize(10);
         lineColor: [200, 200, 200],
         lineWidth: 0.5,
-        overflow: 'linebreak'
-      }
+    doc.setTextColor(22, 163, 74); // text-green-600 (#16A34A)
+    doc.text('✓ Usando dados reais da análise de conformidade', margin + contentWidth/2, yPos + 10, { align: 'center' });
     });
-  } else {
-    // No data message - enhanced styling
+    doc.setTextColor(234, 88, 12); // text-orange-600 (#EA580C)
+    doc.text('⚠ Usando dados estimados (carregando dados reais...)', margin + contentWidth/2, yPos + 10, { align: 'center' });
     doc.setFontSize(16);
     doc.setTextColor(107, 114, 128);
-    doc.text('📋 Nenhum dado de medição disponível para o período selecionado.', margin, yPos + 40);
+  yPos += 25;
   }
   
-  // Footer - enhanced positioning
-  yPos = pageHeight - 10;
-  doc.setFontSize(11);
   doc.setTextColor(107, 114, 128);
   doc.text(`Página ${currentPage} de ${totalPages} | 30 registros exibidos`, margin, yPos);
 }

@@ -367,14 +367,14 @@ function generateClientInfoPage(
     if (allNonCompliantValues.length === 0) {
       // Green success message - exact styling as preview
       doc.setFillColor(240, 253, 244); // bg-green-50
-      doc.rect(margin + 10, yPos + 18, contentWidth - 20, 18, 'F');
+      doc.rect(margin + 10, yPos + 20, contentWidth - 20, 20, 'F');
       doc.setDrawColor(34, 197, 94); // border-green-200
-      doc.rect(margin + 10, yPos + 18, contentWidth - 20, 18);
+      doc.rect(margin + 10, yPos + 20, contentWidth - 20, 20);
       
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(21, 128, 61); // text-green-800
-      doc.text('✓ Nenhuma não conformidade detectada no período', margin + contentWidth/2, yPos + 29, { align: 'center' });
+      doc.text('✓ Nenhuma não conformidade detectada no período', margin + contentWidth/2, yPos + 32, { align: 'center' });
     } else {
       // Non-compliance table - exact styling as preview
       const tableData = allNonCompliantValues.slice(0, 10).map(nc => [
@@ -386,12 +386,12 @@ function generateClientInfoPage(
       ]);
       
       (doc as any).autoTable({
-        startY: yPos + 18,
+        startY: yPos + 20,
         head: [['Data', 'Ponto de Coleta', 'Parâmetro', 'Valor', 'Nível de Risco']],
         body: tableData,
         headStyles: { 
-          fillColor: [254, 226, 226], // bg-red-100 exact
-          textColor: [185, 28, 28], // text-red-700 exact
+          fillColor: [254, 202, 202], // bg-red-100
+          textColor: [153, 27, 27], // text-red-800
           fontStyle: 'bold',
           fontSize: 9,
           halign: 'center'
@@ -402,11 +402,11 @@ function generateClientInfoPage(
           alternateRowStyles: { fillColor: [254, 242, 242] } // bg-red-25
         },
         columnStyles: {
-          0: { cellWidth: 25, fontStyle: 'bold' },
+          0: { cellWidth: 30, fontStyle: 'bold' },
           1: { cellWidth: 50 },
-          2: { cellWidth: 30, fontStyle: 'bold' },
-          3: { cellWidth: 25, textColor: [185, 28, 28] }, // text-red-700
-          4: { cellWidth: 30, textColor: [185, 28, 28], fontStyle: 'bold' }
+          2: { cellWidth: 35, fontStyle: 'bold' },
+          3: { cellWidth: 30, textColor: [185, 28, 28] }, // text-red-700
+          4: { cellWidth: 35, textColor: [185, 28, 28], fontStyle: 'bold' }
         },
         margin: { left: margin + 10, right: margin + 10 },
         tableWidth: contentWidth - 20,
@@ -632,24 +632,24 @@ function generateTablePage(
 ) {
   let yPos = margin;
   
-  // Page Header - enhanced styling
-  doc.setFontSize(20);
+  // Page Header - exact styling as preview
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('📋 Dados de Medição', margin, yPos + 15);
-  doc.setFontSize(14);
+  doc.text('Dados de Medição', margin, yPos + 12);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(107, 114, 128); // text-gray-600
-  doc.text('Registro detalhado das medições por ponto de coleta (30 registros)', margin, yPos + 28);
+  doc.text('Registro detalhado das medições por ponto de coleta (30 registros)', margin, yPos + 22);
   
-  yPos += 45;
+  yPos += 35;
   doc.setTextColor(0, 0, 0);
   
-  // Generate enhanced table
+  // Generate table
   const tableData = generateTableDataFromReport(reportData);
   
   if (tableData && tableData.rows.length > 0) {
-    // Prepare enhanced headers
+    // Prepare headers
     const mainHeaders = ['Data'];
     const subHeaders = [''];
     
@@ -676,7 +676,7 @@ function generateTablePage(
       return rowData;
     });
     
-    // Generate enhanced table
+    // Generate table
     (doc as any).autoTable({
       startY: yPos,
       head: [mainHeaders, subHeaders],
@@ -686,15 +686,15 @@ function generateTablePage(
           fillColor: [34, 197, 94], // Green-500 for main headers
           textColor: [255, 255, 255], 
           fontStyle: 'bold',
-          fontSize: 9,
+          fontSize: 11,
           halign: 'center'
         },
         {
           fillColor: [34, 197, 94], // Green-500 for sub headers
           textColor: [255, 255, 255],
-          fontSize: 8,
+          fontSize: 10,
           halign: 'center',
-          alternateRowStyles: { fillColor: [255, 245, 245] } // lighter red-25
+          fontStyle: 'normal'
         }
       ],
       bodyStyles: { 
@@ -712,9 +712,9 @@ function generateTablePage(
     });
     
     const tableEndY = (doc as any).lastAutoTable.finalY;
-    yPos = tableEndY + 15;
+    doc.text('Nenhum dado de medição disponível para o período selecionado.', margin, yPos + 30);
   }
-  
+    // No data message - exact styling as preview
   // Footer - exact positioning as preview
   yPos = pageHeight - 10;
   doc.setFontSize(10);

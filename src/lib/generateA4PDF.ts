@@ -293,8 +293,9 @@ function generateClientInfoPage(
     complianceRate: 0
   };
   
-  // Summary stats in 4 columns - exact positioning as preview
-  const statColWidth = (contentWidth - 60) / 4;
+  // Summary stats in 4 columns - exact match to screenshot
+  const statColWidth = (contentWidth - 75) / 4; // Account for 25mm total spacing
+  const statSpacing = 25 / 3; // 3 gaps between 4 boxes
   const stats = [
     { label: 'Pontos de Coleta', value: realStats.totalCollectionPoints.toString() },
     { label: 'Dias com Medições', value: realStats.totalMeasurementDays.toString() },
@@ -303,23 +304,23 @@ function generateClientInfoPage(
   ];
   
   stats.forEach((stat, index) => {
-    const x = margin + 30 + (index * (statColWidth + 10));
-    doc.setFillColor(255, 255, 255); // bg-white
-    doc.rect(x, yPos + 20, statColWidth, 20, 'F');
+    const x = margin + 25 + (index * (statColWidth + statSpacing));
+    doc.setFillColor(255, 255, 255);
+    doc.rect(x, yPos + 20, statColWidth, 18, 'F');
     doc.setDrawColor(229, 231, 235);
-    doc.rect(x, yPos + 20, statColWidth, 20);
+    doc.rect(x, yPos + 20, statColWidth, 18);
     
-    // Large number - exact styling as preview
-    doc.setFontSize(18);
+    // Large number - exact match to screenshot
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(59, 130, 246); // text-blue-600
-    doc.text(stat.value, x + statColWidth/2, yPos + 28, { align: 'center' });
+    doc.setTextColor(59, 130, 246); // Blue-600 for all numbers like screenshot
+    doc.text(stat.value, x + statColWidth/2, yPos + 30, { align: 'center' });
     
-    // Label below - exact styling as preview
+    // Label below - exact match to screenshot
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(75, 85, 99); // text-gray-600
-    doc.text(stat.label, x + statColWidth/2, yPos + 35, { align: 'center' });
+    doc.setTextColor(71, 85, 105); // text-slate-600 from screenshot
+    doc.text(stat.label, x + statColWidth/2, yPos + 36, { align: 'center' });
   });
   
   yPos += 55;

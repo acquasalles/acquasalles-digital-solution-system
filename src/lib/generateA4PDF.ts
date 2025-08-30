@@ -76,7 +76,16 @@ export async function generateA4PDF(
     // Page 1: Client Information and Summary
     generateClientInfoPage(
       doc, 
-      clientInfo, 
+      {
+        ...clientInfo,
+        cnpj: clientInfo.cnpj || '16.716.417/0001-95',
+        address: clientInfo.address || 'Endereço não informado',
+        city: clientInfo.city || 'Bela Vista de Minas (MG)',
+        state: clientInfo.state || 'SP',
+        phone: clientInfo.phone || '+55 (11) 1234-5678',
+        email: clientInfo.email || 'contato@cliente.com.br',
+        contact: clientInfo.contact || ''
+      }, 
       reportPeriod, 
       validCollectionPoints, 
       reportData, 

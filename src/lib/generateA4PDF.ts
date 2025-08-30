@@ -293,9 +293,8 @@ function generateClientInfoPage(
     complianceRate: 0
   };
   
-  // Summary stats in 4 columns - exact match to screenshot
-  const statColWidth = (contentWidth - 75) / 4; // Account for 25mm total spacing
-  const statSpacing = 25 / 3; // 3 gaps between 4 boxes
+  // Summary stats in 4 columns - exact positioning as preview
+  const statColWidth = (contentWidth - 60) / 4;
   const stats = [
     { label: 'Pontos de Coleta', value: realStats.totalCollectionPoints.toString() },
     { label: 'Dias com Medições', value: realStats.totalMeasurementDays.toString() },
@@ -304,23 +303,23 @@ function generateClientInfoPage(
   ];
   
   stats.forEach((stat, index) => {
-    const x = margin + 25 + (index * (statColWidth + statSpacing));
-    doc.setFillColor(255, 255, 255);
-    doc.rect(x, yPos + 20, statColWidth, 18, 'F');
+    const x = margin + 30 + (index * (statColWidth + 10));
+    doc.setFillColor(255, 255, 255); // bg-white
+    doc.rect(x, yPos + 20, statColWidth, 20, 'F');
     doc.setDrawColor(229, 231, 235);
-    doc.rect(x, yPos + 20, statColWidth, 18);
+    doc.rect(x, yPos + 20, statColWidth, 20);
     
-    // Large number - exact match to screenshot
-    doc.setFontSize(16);
+    // Large number - exact styling as preview
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(59, 130, 246); // Blue-600 for all numbers like screenshot
-    doc.text(stat.value, x + statColWidth/2, yPos + 30, { align: 'center' });
+    doc.setTextColor(59, 130, 246); // text-blue-600
+    doc.text(stat.value, x + statColWidth/2, yPos + 28, { align: 'center' });
     
-    // Label below - exact match to screenshot
+    // Label below - exact styling as preview
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(71, 85, 105); // text-slate-600 from screenshot
-    doc.text(stat.label, x + statColWidth/2, yPos + 36, { align: 'center' });
+    doc.setTextColor(75, 85, 99); // text-gray-600
+    doc.text(stat.label, x + statColWidth/2, yPos + 35, { align: 'center' });
   });
   
   yPos += 55;
@@ -368,14 +367,14 @@ function generateClientInfoPage(
     if (allNonCompliantValues.length === 0) {
       // Green success message - exact styling as preview
       doc.setFillColor(240, 253, 244); // bg-green-50
-      doc.rect(margin + 10, yPos + 20, contentWidth - 20, 20, 'F');
+      doc.rect(margin + 10, yPos + 18, contentWidth - 20, 18, 'F');
       doc.setDrawColor(34, 197, 94); // border-green-200
-      doc.rect(margin + 10, yPos + 20, contentWidth - 20, 20);
+      doc.rect(margin + 10, yPos + 18, contentWidth - 20, 18);
       
-      doc.setFontSize(11);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(21, 128, 61); // text-green-800
-      doc.text('✓ Nenhuma não conformidade detectada no período', margin + contentWidth/2, yPos + 32, { align: 'center' });
+      doc.text('✓ Nenhuma não conformidade detectada no período', margin + contentWidth/2, yPos + 29, { align: 'center' });
     } else {
       // Non-compliance table - exact styling as preview
       const tableData = allNonCompliantValues.slice(0, 10).map(nc => [
@@ -387,12 +386,12 @@ function generateClientInfoPage(
       ]);
       
       (doc as any).autoTable({
-        startY: yPos + 20,
+        startY: yPos + 18,
         head: [['Data', 'Ponto de Coleta', 'Parâmetro', 'Valor', 'Nível de Risco']],
         body: tableData,
         headStyles: { 
-          fillColor: [254, 202, 202], // bg-red-100
-          textColor: [153, 27, 27], // text-red-800
+          fillColor: [254, 226, 226], // bg-red-100 exact
+          textColor: [185, 28, 28], // text-red-700 exact
           fontStyle: 'bold',
           fontSize: 9,
           halign: 'center'
@@ -403,11 +402,11 @@ function generateClientInfoPage(
           alternateRowStyles: { fillColor: [254, 242, 242] } // bg-red-25
         },
         columnStyles: {
-          0: { cellWidth: 30, fontStyle: 'bold' },
+          0: { cellWidth: 25, fontStyle: 'bold' },
           1: { cellWidth: 50 },
-          2: { cellWidth: 35, fontStyle: 'bold' },
-          3: { cellWidth: 30, textColor: [185, 28, 28] }, // text-red-700
-          4: { cellWidth: 35, textColor: [185, 28, 28], fontStyle: 'bold' }
+          2: { cellWidth: 30, fontStyle: 'bold' },
+          3: { cellWidth: 25, textColor: [185, 28, 28] }, // text-red-700
+          4: { cellWidth: 30, textColor: [185, 28, 28], fontStyle: 'bold' }
         },
         margin: { left: margin + 10, right: margin + 10 },
         tableWidth: contentWidth - 20,
@@ -687,15 +686,15 @@ function generateTablePage(
           fillColor: [34, 197, 94], // Green-500 for main headers
           textColor: [255, 255, 255], 
           fontStyle: 'bold',
-          fontSize: 11,
+          fontSize: 9,
           halign: 'center'
         },
         {
           fillColor: [34, 197, 94], // Green-500 for sub headers
           textColor: [255, 255, 255],
-          fontSize: 10,
+          fontSize: 8,
           halign: 'center',
-          fontStyle: 'normal'
+          alternateRowStyles: { fillColor: [255, 245, 245] } // lighter red-25
         }
       ],
       bodyStyles: { 

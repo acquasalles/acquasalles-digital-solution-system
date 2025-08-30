@@ -3,7 +3,7 @@ import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { IntlShape } from 'react-intl';
 import type { ReportData } from '../types/report';
-import { fetchWaterQualityData, generateComplianceAnalysis } from './waterQualityCompliance';
+import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
 import type { ComplianceAnalysis } from '../types/waterQuality';
 
 interface CollectionPointData {

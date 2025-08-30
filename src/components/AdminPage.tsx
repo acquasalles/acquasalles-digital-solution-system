@@ -135,35 +135,28 @@ export function AdminPage() {
       console.log('Starting A4 PDF generation with data:', reportData);
       console.log('Chart images provided:', chartImages?.size || 0);
       
-      // Get selected client info for A4 report
-      const selectedClientInfo = selectedClient ? clients.find(c => c.id === selectedClient) : null;
-      const clientInfoForA4 = selectedClientInfo ? {
-        name: selectedClientInfo.razao_social || 'Cliente',
-        cnpj: '16.716.417/0001-95', // Default CNPJ
-        address: 'Endereço não informado',
-        city: selectedClientInfo.cidade || 'Cidade',
-        state: 'SP',
-        phone: '+55 (11) 1234-5678',
-        email: 'contato@cliente.com.br',
-        contact: 'Responsável Técnico'
-      } : {
-        name: 'Cliente',
-        cnpj: '16.716.417/0001-95',
-        address: 'Endereço não informado',
-        city: 'Cidade',
-        state: 'SP',
-        phone: '+55 (11) 1234-5678',
-        email: 'contato@cliente.com.br',
-        contact: 'Responsável Técnico'
-      };
-
       await generateA4PDF(
         reportData,
         validCollectionPoints,
-        clientInfoForA4,
-        { start: startDate ? new Date(startDate) : new Date(), end: endDate ? new Date(endDate) : new Date() },
+        clientInfoForA4 || {
+          name: 'Cliente',
+          cnpj: '16.716.417/0001-95',
+          address: 'Endereço não informado',
+          city: 'Cidade',
+          state: 'SP',
+          phone: '+55 (11) 1234-5678',
+          email: 'contato@cliente.com.br',
+          contact: 'Responsável Técnico'
+        },
+        { 
+          start: startDate ? new Date(startDate) : new Date(), 
+          end: endDate ? new Date(endDate) : new Date() 
+        },
         intl,
-        chartImages
+        chartImages,
+        selectedClient || '',
+        startDate || '',
+        endDate || ''
       );
       console.log('A4 PDF generation completed successfully');
     } catch (error) {

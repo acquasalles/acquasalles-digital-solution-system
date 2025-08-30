@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { useClients } from '../lib/ClientsContext';
+import { useAdminData } from '../hooks/useAdminData';
 import { Navigation } from './Navigation';
 import { ReportGeneration } from './ReportGeneration';
 import { WaterQualityComplianceAnalysis } from './WaterQualityComplianceAnalysis';
@@ -17,6 +18,18 @@ interface DashboardStats {
 export function AdminPage() {
   const { user, isAdmin } = useAuth();
   const { clients } = useClients();
+  const {
+    isLoadingClients,
+    selectedClient,
+    startDate,
+    endDate,
+    setSelectedClient,
+    setStartDate,
+    setEndDate,
+    handleGenerateReport,
+    isAnyLoading,
+    isLoading
+  } = useAdminData();
   const [stats, setStats] = useState<DashboardStats>({
     totalClients: 0,
     totalUsers: 0,
@@ -156,7 +169,19 @@ export function AdminPage() {
                 <h2 className="text-lg font-medium text-gray-900 mb-4">
                   Geração de Relatórios
                 </h2>
-                <ReportGeneration />
+                <ReportGeneration
+                  clients={clients}
+                  isLoadingClients={isLoadingClients}
+                  selectedClient={selectedClient}
+                  startDate={startDate}
+                  endDate={endDate}
+                  setSelectedClient={setSelectedClient}
+                  setStartDate={setStartDate}
+                  setEndDate={setEndDate}
+                  handleGenerateReport={handleGenerateReport}
+                  isAnyLoading={isAnyLoading}
+                  isLoading={isLoading}
+                />
               </div>
             </div>
 
@@ -165,7 +190,11 @@ export function AdminPage() {
                 <h2 className="text-lg font-medium text-gray-900 mb-4">
                   Análise de Conformidade
                 </h2>
-                <WaterQualityComplianceAnalysis />
+                <WaterQualityComplianceAnalysis
+                  clientId={selectedClient?.id}
+                  startDate={startDate}
+                  endDate={endDate}
+                />
               </div>
             </div>
           </div>

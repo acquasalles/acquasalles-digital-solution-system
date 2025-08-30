@@ -86,7 +86,8 @@ export async function generateA4PDF(
       realAnalysis
     );
     
-    // Chart Pages - 6 charts per page (3x2 grid)
+    // Skip chart pages - go directly to table page
+    
     const chartsPerPage = 6;
     
     if (validCollectionPoints.length > 0) {
@@ -497,9 +498,12 @@ function generateClientInfoPage(
   // Footer - exact positioning as preview
   yPos = pageHeight - 15;
   doc.setFontSize(10);
-  doc.setTextColor(107, 114, 128); // text-gray-500
+  // Footer - exact positioning from preview
+  yPos = pageHeight - 12;
+  doc.setFontSize(9);
+  doc.setTextColor(107, 114, 128); // text-gray-500 (#6B7280)
   doc.text('Este relatório foi gerado automaticamente pelo Sistema de Monitoramento ACQUASALLES', margin, yPos);
-  doc.text(`Página 1 de ${Math.ceil(validCollectionPoints.length / 6) + 2} | Formato Paisagem (297mm x 210mm)`, margin, yPos + 6);
+  doc.text(`Página 1 de 2 | Formato Paisagem (297mm x 210mm)`, margin, yPos + 5);
 }
 
 function generateChartsPage(
@@ -583,21 +587,21 @@ function generateChartsPage(
         console.log(`Successfully added chart image for ${point.name}`);
       } catch (error) {
         console.error(`Error adding chart image for point ${point.name}:`, error);
-        // Fallback to placeholder text
-        doc.setTextColor(107, 114, 128);
-        doc.setFontSize(11);
+        doc.setFillColor(252, 165, 165); // bg-red-200
+        doc.rect(chartAreaX + 2, chartAreaY + 2, chartAreaWidth - 4, chartAreaHeight - 4, 'F');
+        doc.setFontSize(8);
         doc.text('Gráfico Indisponível', x + chartWidth/2, y + 50, { align: 'center' });
       }
     } else {
       // Chart placeholder text - exact styling as preview
       doc.setTextColor(107, 114, 128); // text-gray-500
       doc.setFontSize(10);
-      doc.text('Gráfico de Medições', x + chartWidth/2, y + 45, { align: 'center' });
+      doc.text('Gráfico não disponível', x + chartWidth/2, y + 45, { align: 'center' });
       doc.setFontSize(8);
       const measurementTypes = point.datasetStats.filter(stat => !stat.hidden).map(stat => stat.label).join(', ');
-      const typeLines = doc.splitTextToSize(measurementTypes, chartWidth - 20);
+      const typeLines = doc.splitTextToSize(measurementTypes, chartAreaWidth - 10);
       typeLines.slice(0, 2).forEach((line: string, lineIndex: number) => {
-        doc.text(line, x + chartWidth/2, y + 55 + (lineIndex * 5), { align: 'center' });
+        doc.text(line, x + chartWidth/2, y + 55 + (lineIndex * 6), { align: 'center' });
       });
     }
     
@@ -635,7 +639,6 @@ function generateTablePage(
   reportData: ReportData,
   validCollectionPoints: CollectionPointData[],
   currentPage: number,
-  totalPages: number,
   margin: number,
   contentWidth: number,
   pageHeight: number,
@@ -696,31 +699,24 @@ function generateTablePage(
         { 
           fillColor: [34, 197, 94], // Green-500 for main headers
           textColor: [255, 255, 255], 
-          fontStyle: 'bold', 
-          fontSize: 12,
-          halign: 'center',
-          cellPadding: 4
+          fontStyle: 'bold',
+          fontSize: 11,
+          halign: 'center'
         },
-        { 
+        {
           fillColor: [34, 197, 94], // Green-500 for sub headers
-          textColor: [255, 255, 255], 
-          fontStyle: 'normal', 
+          textColor: [255, 255, 255],
           fontSize: 10,
           halign: 'center',
-          cellPadding: 3
+          fontStyle: 'normal'
         }
       ],
       bodyStyles: { 
-        fontSize: 9, 
-        cellPadding: 3,
+        fontSize: 9,
         halign: 'center',
+        cellPadding: 3,
         alternateRowStyles: { fillColor: [249, 250, 251] } // bg-gray-50
       },
-      columnStyles: {
-        0: { cellWidth: 30, fontStyle: 'bold', halign: 'center' }
-      },
-      theme: 'grid',
-      tableWidth: 'auto',
       margin: { left: margin, right: margin },
       styles: {
         lineColor: [200, 200, 200],
@@ -728,18 +724,16 @@ function generateTablePage(
         overflow: 'linebreak'
       }
     });
-  } else {
-    // No data message - enhanced styling
-    doc.setFontSize(16);
-    doc.setTextColor(107, 114, 128);
-    doc.text('📋 Nenhum dado de medição disponível para o período selecionado.', margin, yPos + 40);
+    
+    const tableEndY = (doc as any).lastAutoTable.finalY;
+    yPos = tableEndY + 15;
   }
   
-  // Footer - enhanced positioning
+  // Footer - exact positioning as preview
   yPos = pageHeight - 10;
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setTextColor(107, 114, 128);
-  doc.text(`Página ${currentPage} de ${totalPages} | 30 registros exibidos`, margin, yPos);
+  doc.text(`Página ${currentPage} | 30 registros exibidos`, margin, yPos);
 }
 
 function generateTableDataFromReport(reportData: ReportData) {

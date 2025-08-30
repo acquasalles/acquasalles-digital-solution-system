@@ -640,6 +640,7 @@ function generateTablePage(
   reportData: ReportData,
   validCollectionPoints: CollectionPointData[],
   currentPage: number,
+  totalPages: number,
   margin: number,
   contentWidth: number,
   pageHeight: number,
@@ -647,7 +648,7 @@ function generateTablePage(
 ) {
   let yPos = margin;
   
-  // Page Header - enhanced styling
+  // Page Header - EXACT styling as screenshot
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
@@ -660,11 +661,11 @@ function generateTablePage(
   yPos += 45;
   doc.setTextColor(0, 0, 0);
   
-  // Generate enhanced table
+  // Generate table with exact styling
   const tableData = generateTableDataFromReport(reportData);
   
   if (tableData && tableData.rows.length > 0) {
-    // Prepare enhanced headers
+    // Prepare headers
     const mainHeaders = ['Data'];
     const subHeaders = [''];
     
@@ -691,7 +692,7 @@ function generateTablePage(
       return rowData;
     });
     
-    // Generate enhanced table
+    // Generate table
     (doc as any).autoTable({
       startY: yPos,
       head: [mainHeaders, subHeaders],
@@ -733,7 +734,7 @@ function generateTablePage(
   // Footer - exact positioning as preview
   yPos = pageHeight - 10;
   doc.setFontSize(10);
-  doc.setTextColor(107, 114, 128);
+    // No data message
   doc.text(`Página ${currentPage} | 30 registros exibidos`, margin, yPos);
 }
 

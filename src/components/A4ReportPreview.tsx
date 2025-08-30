@@ -95,13 +95,18 @@ export function A4ReportPreview({
   const captureChartImages = useCallback(async () => {
     const newChartImages = new Map<string, string>();
     
-    // Wait a bit for charts to fully render
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait longer for charts to fully render
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     for (const [pointId, chartInstance] of chartRefs.current.entries()) {
       try {
         if (chartInstance && chartInstance.canvas) {
+          // Force chart update before capture
+          chartInstance.update('none');
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
           const base64Image = chartInstance.toBase64Image('image/png', 1.0);
+          console.log(`Chart image for ${pointId}: ${base64Image.substring(0, 50)}...`);
           newChartImages.set(pointId, base64Image);
           console.log(`Captured chart image for point: ${pointId}`);
         }
@@ -112,6 +117,7 @@ export function A4ReportPreview({
     
     setChartImages(newChartImages);
     console.log(`Total chart images captured: ${newChartImages.size}`);
+    return newChartImages;
   }, []);
 
   // Capture chart images when collection points data changes or current page changes
@@ -204,9 +210,9 @@ export function A4ReportPreview({
 
   const handleDownloadPDF = useCallback(async () => {
     if (onDownloadPDF) {
-      // Capture latest chart images before download
-      await captureChartImages();
-      await onDownloadPDF(chartImages);
+      // Capture latest chart images and pass them directly
+      const capturedImages = await captureChartImages();
+      await onDownloadPDF(capturedImages);
     } else if (reportData) {
       try {
         await generatePDF(reportData, intl);
@@ -214,7 +220,7 @@ export function A4ReportPreview({
         console.error('Error generating PDF:', error);
       }
     }
-  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
+  }, [onDownloadPDF, reportData, intl, captureChartImages]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {

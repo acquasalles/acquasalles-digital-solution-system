@@ -33,7 +33,7 @@ interface ClientInfo {
 
 export async function generateA4PDF(
   reportData: ReportData,
-  collectionPointsData: CollectionPointData[],
+  validCollectionPoints: CollectionPointData[],
   clientInfo: ClientInfo,
   reportPeriod: { start: Date; end: Date },
   intl: IntlShape,
@@ -77,7 +77,7 @@ export async function generateA4PDF(
       doc, 
       clientInfo, 
       reportPeriod, 
-      collectionPointsData, 
+      validCollectionPoints, 
       reportData, 
       margin, 
       contentWidth, 
@@ -88,9 +88,6 @@ export async function generateA4PDF(
     
     // Chart Pages - 6 charts per page (3x2 grid)
     const chartsPerPage = 6;
-    const validCollectionPoints = collectionPointsData.filter(
-      point => point.datasetStats && point.datasetStats.length > 0
-    );
     
     if (validCollectionPoints.length > 0) {
       const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
@@ -124,7 +121,7 @@ export async function generateA4PDF(
       generateTablePage(
         doc, 
         reportData, 
-        collectionPointsData, 
+        validCollectionPoints, 
         currentPage, 
         margin, 
         contentWidth, 
@@ -147,7 +144,7 @@ function generateClientInfoPage(
   doc: jsPDF,
   clientInfo: ClientInfo,
   reportPeriod: { start: Date; end: Date },
-  collectionPointsData: CollectionPointData[],
+  validCollectionPoints: CollectionPointData[],
   reportData: ReportData,
   margin: number,
   contentWidth: number,
@@ -201,6 +198,7 @@ function generateClientInfoPage(
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   doc.text('Dados da Empresa', margin + 3, yPos + 8);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -214,6 +212,7 @@ function generateClientInfoPage(
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   doc.text('Endereço', margin + colWidth + 3, yPos + 8);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -234,6 +233,7 @@ function generateClientInfoPage(
   
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   doc.text('Contato', margin + colWidth * 2 + 3, yPos + 8);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -296,9 +296,9 @@ function generateClientInfoPage(
       complianceRate: realAnalysis.complianceRate
     };
   })() : {
-    totalCollectionPoints: collectionPointsData.length,
+    totalCollectionPoints: validCollectionPoints.length,
     totalMeasurementDays: reportData?.datas.length || 0,
-    totalParameters: collectionPointsData.reduce((acc, point) => 
+    totalParameters: validCollectionPoints.reduce((acc, point) => 
       acc + point.datasetStats.filter(stat => !stat.hidden).length, 0
     ),
     daysAnalyzed: Math.round((reportPeriod.end.getTime() - reportPeriod.start.getTime()) / (1000 * 60 * 60 * 24)),
@@ -407,10 +407,12 @@ function generateClientInfoPage(
           fillColor: [254, 202, 202], // bg-red-100
           textColor: [153, 27, 27], // text-red-800
           fontStyle: 'bold',
-          fontSize: 8
+          fontSize: 8,
+          halign: 'center'
         },
         bodyStyles: { 
           fontSize: 7,
+          halign: 'center',
           alternateRowStyles: { fillColor: [254, 242, 242] } // bg-red-25
         },
         columnStyles: {
@@ -495,7 +497,7 @@ function generateClientInfoPage(
   doc.setFontSize(9);
   doc.setTextColor(107, 114, 128); // text-gray-500
   doc.text('Este relatório foi gerado automaticamente pelo Sistema de Monitoramento ACQUASALLES', margin, yPos);
-  doc.text(`Página 1 de ${Math.ceil(collectionPointsData.length / 6) + 2} | Formato Paisagem (297mm x 210mm)`, margin, yPos + 5);
+  doc.text(`Página 1 de ${Math.ceil(validCollectionPoints.length / 6) + 2} | Formato Paisagem (297mm x 210mm)`, margin, yPos + 5);
 }
 
 function generateChartsPage(
@@ -514,6 +516,7 @@ function generateChartsPage(
   // Page Header - exact styling as preview
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   doc.text('Gráficos de Monitoramento', margin, yPos + 8);
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
@@ -547,22 +550,35 @@ function generateChartsPage(
     doc.text(point.name, x + chartWidth/2, y + 8, { align: 'center' });
     
     // Chart area - white background exactly as preview
+    const chartAreaX = x + 3;
+    const chartAreaY = y + 12;
+    const chartAreaWidth = chartWidth - 6;
+    const chartAreaHeight = 52;
+    
     doc.setFillColor(255, 255, 255);
-    doc.rect(x + 3, y + 12, chartWidth - 6, 52, 'F');
+    doc.rect(chartAreaX, chartAreaY, chartAreaWidth, chartAreaHeight, 'F');
     doc.setDrawColor(229, 231, 235);
-    doc.rect(x + 3, y + 12, chartWidth - 6, 52);
+    doc.rect(chartAreaX, chartAreaY, chartAreaWidth, chartAreaHeight);
     
     // Insert chart image if available - exact positioning as preview
     const chartImage = chartImages?.get(point.id);
+    console.log(`Checking chart image for ${point.id}:`, !!chartImage);
+    
     if (chartImage && chartImage.startsWith('data:image/')) {
       try {
-        const imageX = x + 5;
-        const imageY = y + 14;
-        const imageWidth = chartWidth - 10;
-        const imageHeight = 48;
-        
         console.log(`Adding chart image for point: ${point.name}, size: ${chartImage.length}`);
-        doc.addImage(chartImage, 'PNG', imageX, imageY, imageWidth, imageHeight);
+        
+        // Add image with precise positioning to match preview
+        doc.addImage(
+          chartImage, 
+          'PNG', 
+          chartAreaX + 1, 
+          chartAreaY + 1, 
+          chartAreaWidth - 2, 
+          chartAreaHeight - 2
+        );
+        
+        console.log(`Successfully added chart image for ${point.name}`);
       } catch (error) {
         console.error(`Error adding chart image for point ${point.name}:`, error);
         // Fallback to placeholder text
@@ -615,7 +631,7 @@ function generateChartsPage(
 function generateTablePage(
   doc: jsPDF,
   reportData: ReportData,
-  collectionPointsData: CollectionPointData[],
+  validCollectionPoints: CollectionPointData[],
   currentPage: number,
   margin: number,
   contentWidth: number,
@@ -627,6 +643,7 @@ function generateTablePage(
   // Page Header - exact styling as preview
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
+  doc.setTextColor(0, 0, 0);
   doc.text('Dados de Medição', margin, yPos + 8);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -677,7 +694,7 @@ function generateTablePage(
           fillColor: [34, 197, 94], // bg-green-500 for main headers
           textColor: [255, 255, 255], 
           fontStyle: 'bold', 
-          fontSize: 8,
+          fontSize: 10,
           halign: 'center',
           cellPadding: 2
         },
@@ -685,7 +702,7 @@ function generateTablePage(
           fillColor: [34, 197, 94], // bg-green-500 for sub headers
           textColor: [255, 255, 255], 
           fontStyle: 'normal', 
-          fontSize: 7,
+          fontSize: 10,
           halign: 'center',
           cellPadding: 1
         }

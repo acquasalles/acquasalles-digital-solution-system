@@ -635,6 +635,7 @@ function generateTablePage(
   reportData: ReportData,
   validCollectionPoints: CollectionPointData[],
   currentPage: number,
+  totalPages: number,
   margin: number,
   contentWidth: number,
   pageHeight: number,
@@ -642,28 +643,28 @@ function generateTablePage(
 ) {
   let yPos = margin;
   
-  // Page Header - exact styling as preview
-  doc.setFontSize(18);
+  // Page Header - enhanced styling
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
-  doc.text('Dados de Medição', margin, yPos + 12);
-  doc.setFontSize(12);
+  doc.text('📋 Dados de Medição', margin, yPos + 15);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(107, 114, 128); // text-gray-600
-  doc.text('Registro detalhado das medições por ponto de coleta (30 registros)', margin, yPos + 22);
+  doc.text('Registro detalhado das medições por ponto de coleta (30 registros)', margin, yPos + 28);
   
-  yPos += 35;
+  yPos += 45;
   doc.setTextColor(0, 0, 0);
   
-  // Generate table data using the same logic as A4 preview
+  // Generate enhanced table
   const tableData = generateTableDataFromReport(reportData);
   
   if (tableData && tableData.rows.length > 0) {
-    // Prepare headers with merged structure exactly as preview
+    // Prepare enhanced headers
     const mainHeaders = ['Data'];
     const subHeaders = [''];
     
-    // Add collection point headers exactly as preview
+    // Add collection point headers
     tableData.collectionPoints.forEach(point => {
       point.measurements.forEach(measurement => {
         mainHeaders.push(point.name);
@@ -671,7 +672,7 @@ function generateTablePage(
       });
     });
     
-    // Prepare table rows (limit to 30 rows) exactly as preview
+    // Prepare table rows (limit to 30 rows)
     const tableRows = tableData.rows.slice(0, 30).map(row => {
       const rowData = [row.date];
       
@@ -686,59 +687,59 @@ function generateTablePage(
       return rowData;
     });
     
-    // Generate table using autoTable with exact styling as preview
+    // Generate enhanced table
     (doc as any).autoTable({
       startY: yPos,
       head: [mainHeaders, subHeaders],
       body: tableRows,
       headStyles: [
         { 
-          fillColor: [16, 185, 129], // bg-emerald-500 for main headers
+          fillColor: [34, 197, 94], // Green-500 for main headers
           textColor: [255, 255, 255], 
           fontStyle: 'bold', 
-          fontSize: 11,
+          fontSize: 12,
           halign: 'center',
-          cellPadding: 3
+          cellPadding: 4
         },
         { 
-          fillColor: [16, 185, 129], // bg-emerald-500 for sub headers
+          fillColor: [34, 197, 94], // Green-500 for sub headers
           textColor: [255, 255, 255], 
           fontStyle: 'normal', 
-          fontSize: 9,
+          fontSize: 10,
           halign: 'center',
-          cellPadding: 2
+          cellPadding: 3
         }
       ],
       bodyStyles: { 
-        fontSize: 8, 
-        cellPadding: 2,
+        fontSize: 9, 
+        cellPadding: 3,
         halign: 'center',
         alternateRowStyles: { fillColor: [249, 250, 251] } // bg-gray-50
       },
       columnStyles: {
-        0: { cellWidth: 25, fontStyle: 'bold', halign: 'center' }
+        0: { cellWidth: 30, fontStyle: 'bold', halign: 'center' }
       },
       theme: 'grid',
       tableWidth: 'auto',
       margin: { left: margin, right: margin },
       styles: {
         lineColor: [200, 200, 200],
-        lineWidth: 0.3,
+        lineWidth: 0.5,
         overflow: 'linebreak'
       }
     });
   } else {
-    // No data message - exact styling as preview
-    doc.setFontSize(14);
+    // No data message - enhanced styling
+    doc.setFontSize(16);
     doc.setTextColor(107, 114, 128);
-    doc.text('Nenhum dado de medição disponível para o período selecionado.', margin, yPos + 30);
+    doc.text('📋 Nenhum dado de medição disponível para o período selecionado.', margin, yPos + 40);
   }
   
-  // Footer - exact positioning as preview
+  // Footer - enhanced positioning
   yPos = pageHeight - 10;
-  doc.setFontSize(10);
+  doc.setFontSize(11);
   doc.setTextColor(107, 114, 128);
-  doc.text(`Página ${currentPage} | 30 registros exibidos`, margin, yPos);
+  doc.text(`Página ${currentPage} de ${totalPages} | 30 registros exibidos`, margin, yPos);
 }
 
 function generateTableDataFromReport(reportData: ReportData) {

@@ -89,33 +89,7 @@ export async function generateA4PDF(
     
     // Skip chart pages - go directly to table page
     
-    const chartsPerPage = 6;
-    
-    if (validCollectionPoints.length > 0) {
-      const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
-      
-      for (let pageIndex = 0; pageIndex < totalChartPages; pageIndex++) {
-        doc.addPage();
-        currentPage++;
-        
-        const startIndex = pageIndex * chartsPerPage;
-        const pageCharts = validCollectionPoints.slice(startIndex, startIndex + chartsPerPage);
-        
-        generateChartsPage(
-          doc, 
-          pageCharts, 
-          currentPage, 
-          totalChartPages + 2, 
-          margin, 
-          contentWidth, 
-          pageHeight, 
-          pageWidth, 
-          chartImages
-        );
-      }
-    }
-    
-    // Table Page - Use the same data as the A4 preview
+    // Table Page - Use the same data as the A4 preview  
     if (reportData && reportData.datas.length > 0) {
       doc.addPage();
       currentPage++;
@@ -124,7 +98,8 @@ export async function generateA4PDF(
         doc, 
         reportData, 
         validCollectionPoints, 
-        currentPage, 
+        currentPage,
+        2, // Total pages (only 2 pages now)
         margin, 
         contentWidth, 
         pageHeight, 
@@ -648,7 +623,7 @@ function generateTablePage(
 ) {
   let yPos = margin;
   
-  // Page Header - EXACT styling as screenshot
+  // Page Header - enhanced styling
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(0, 0, 0);
@@ -661,11 +636,11 @@ function generateTablePage(
   yPos += 45;
   doc.setTextColor(0, 0, 0);
   
-  // Generate table with exact styling
+  // Generate enhanced table
   const tableData = generateTableDataFromReport(reportData);
   
   if (tableData && tableData.rows.length > 0) {
-    // Prepare headers
+    // Prepare enhanced headers
     const mainHeaders = ['Data'];
     const subHeaders = [''];
     
@@ -692,7 +667,7 @@ function generateTablePage(
       return rowData;
     });
     
-    // Generate table
+    // Generate enhanced table
     (doc as any).autoTable({
       startY: yPos,
       head: [mainHeaders, subHeaders],
@@ -734,8 +709,8 @@ function generateTablePage(
   // Footer - exact positioning as preview
   yPos = pageHeight - 10;
   doc.setFontSize(10);
-    // No data message
-  doc.text(`Página ${currentPage} | 30 registros exibidos`, margin, yPos);
+  doc.setTextColor(107, 114, 128);
+  doc.text(`Página ${currentPage} de ${totalPages} | 30 registros exibidos`, margin, yPos);
 }
 
 function generateTableDataFromReport(reportData: ReportData) {

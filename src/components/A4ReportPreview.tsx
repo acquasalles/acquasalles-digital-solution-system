@@ -211,7 +211,9 @@ export function A4ReportPreview({
   const handleDownloadPDF = useCallback(async () => {
     if (onDownloadPDF) {
       // Capture latest chart images and pass them directly
+      console.log('Starting PDF download - capturing charts first...');
       const capturedImages = await captureChartImages();
+      console.log('Charts captured, calling onDownloadPDF with images:', capturedImages.size);
       await onDownloadPDF(capturedImages);
     } else if (reportData) {
       try {
@@ -660,7 +662,8 @@ export function A4ReportPreview({
           )}
 
           {/* Chart Pages - Using real collection points data */}
-          {currentPage > 1 && currentPage <= 1 + totalChartPages && (
+          {/* Always render charts for capture, but control visibility */}
+          <div style={{ display: currentPage > 1 && currentPage <= 1 + totalChartPages ? 'block' : 'none' }}>
             <div className="h-full flex flex-col">
               {/* Page Header - Smaller */}
               <div className="border-b border-gray-200 pb-2 mb-3">
@@ -670,8 +673,14 @@ export function A4ReportPreview({
 
               {/* Charts Grid - 3 columns, 2 rows for landscape with increased height */}
               <div className="flex-1 grid grid-cols-3 gap-3">
-                {getCurrentPageCharts().map((point, index) => (
-                  <div key={point.id} className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col">
+                {validCollectionPoints.map((point, index) => {
+                  const isVisible = getCurrentPageCharts().some(p => p.id === point.id);
+                  return (
+                  <div 
+                    key={point.id} 
+                    className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col"
+                    style={{ display: isVisible ? 'flex' : 'none' }}
+                  >
                     {/* Smaller title with reduced margin */}
                     <h3 className="font-medium text-gray-900 mb-0 text-center text-xs">{point.name}</h3>
                     
@@ -746,7 +755,8 @@ export function A4ReportPreview({
                       ))}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Footer */}
@@ -754,7 +764,40 @@ export function A4ReportPreview({
                 <p>Página {currentPage} de {totalPages} | Formato Paisagem</p>
               </div>
             </div>
-          )}
+          </div>
+
+          {/* Hidden charts for capture - render all charts but keep them hidden */}
+          <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '800px', height: '400px' }}>
+            {validCollectionPoints.map((point) => (
+              <div key={`hidden-${point.id}`} style={{ width: '800px', height: '400px', marginBottom: '20px' }}>
+                <Bar
+                  ref={(ref) => {
+                    if (ref) {
+                      console.log(`Registering hidden chart for ${point.id}`);
+                      registerChart(point.id, ref);
+                    }
+                  }}
+                  data={point.graphData}
+                  options={{
+                    ...point.graphOptions,
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    width: 800,
+                    height: 400,
+                    animation: false,
+                    plugins: {
+                      ...point.graphOptions?.plugins,
+                      title: { 
+                        display: true,
+                        text: point.name,
+                        font: { size: 16, weight: 'bold' }
+                      }
+                    }
+                  }}
+                />
+              </div>
+            ))}
+          </div>
 
           {/* Table Page - Optimized for 30 rows without scrolling */}
           {currentPage === totalPages && generateTableData && (

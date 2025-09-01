@@ -95,13 +95,18 @@ export function A4ReportPreview({
   const captureChartImages = useCallback(async () => {
     const newChartImages = new Map<string, string>();
     
-    // Wait a bit for charts to fully render
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait longer for charts to fully render
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     for (const [pointId, chartInstance] of chartRefs.current.entries()) {
       try {
         if (chartInstance && chartInstance.canvas) {
+          // Force chart update before capture
+          chartInstance.update('none');
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
           const base64Image = chartInstance.toBase64Image('image/png', 1.0);
+          console.log(`Chart image for ${pointId}: ${base64Image.substring(0, 50)}...`);
           newChartImages.set(pointId, base64Image);
           console.log(`Captured chart image for point: ${pointId}`);
         }
@@ -112,6 +117,7 @@ export function A4ReportPreview({
     
     setChartImages(newChartImages);
     console.log(`Total chart images captured: ${newChartImages.size}`);
+    return newChartImages;
   }, []);
 
   // Capture chart images when collection points data changes or current page changes
@@ -204,9 +210,11 @@ export function A4ReportPreview({
 
   const handleDownloadPDF = useCallback(async () => {
     if (onDownloadPDF) {
-      // Capture latest chart images before download
-      await captureChartImages();
-      await onDownloadPDF(chartImages);
+      // Capture latest chart images and pass them directly
+      console.log('Starting PDF download - capturing charts first...');
+      const capturedImages = await captureChartImages();
+      console.log('Charts captured, calling onDownloadPDF with images:', capturedImages.size);
+      await onDownloadPDF(capturedImages);
     } else if (reportData) {
       try {
         await generatePDF(reportData, intl);
@@ -214,7 +222,7 @@ export function A4ReportPreview({
         console.error('Error generating PDF:', error);
       }
     }
-  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
+  }, [onDownloadPDF, reportData, intl, captureChartImages]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -653,105 +661,9 @@ export function A4ReportPreview({
             </div>
           )}
 
-          {/* Chart Pages - Using real collection points data */}
-          {currentPage > 1 && currentPage <= 1 + totalChartPages && (
-            <div className="h-full flex flex-col">
-              {/* Page Header - Smaller */}
-              <div className="border-b border-gray-200 pb-2 mb-3">
-                <h2 className="text-lg font-semibold text-gray-900">Gráficos de Monitoramento</h2>
-                <p className="text-gray-600 text-xs">Análise temporal dos parâmetros de qualidade da água</p>
-              </div>
 
-              {/* Charts Grid - 3 columns, 2 rows for landscape with increased height */}
-              <div className="flex-1 grid grid-cols-3 gap-3">
-                {getCurrentPageCharts().map((point, index) => (
-                  <div key={point.id} className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col">
-                    {/* Smaller title with reduced margin */}
-                    <h3 className="font-medium text-gray-900 mb-0 text-center text-xs">{point.name}</h3>
-                    
-                    {/* Increased chart height with reduced padding */}
-                    <div className="h-52">
-                      <Bar
-                        ref={(ref) => {
-                          if (ref) {
-                            registerChart(point.id, ref);
-                          }
-                        }}
-                        data={point.graphData} options={{
-                        ...point.graphOptions,
-                        layout: {
-                          padding: {
-                            top: 5,
-                            bottom: 5,
-                            left: 5,
-                            right: 5
-                          }
-                        },
-                        plugins: {
-                          ...point.graphOptions?.plugins,
-                          title: { display: false },
-                          legend: { 
-                            display: true,
-                            position: 'bottom' as const,
-                            labels: {
-                              font: { size: 7 },
-                              padding: 3,
-                              usePointStyle: true,
-                              boxWidth: 5,
-                              boxHeight: 5
-                            }
-                          }
-                        },
-                        scales: {
-                          ...point.graphOptions?.scales,
-                          x: {
-                            ...point.graphOptions?.scales?.x,
-                            ticks: {
-                              font: { size: 7 },
-                              maxRotation: 45,
-                              maxTicksLimit: 5
-                            }
-                          },
-                          y: {
-                            ...point.graphOptions?.scales?.y,
-                            ticks: {
-                              font: { size: 7 },
-                              maxTicksLimit: 5
-                            }
-                          }
-                        }
-                      }} />
-                    </div>
-                    
-                    {/* Smaller stats summary below chart */}
-                    <div className="grid grid-cols-2 gap-1 text-xs mt-1">
-                      {point.datasetStats.filter(stat => !stat.hidden).slice(0, 4).map(stat => (
-                        <div key={stat.label} className="bg-white p-1 rounded text-center">
-                          <div className="font-medium text-xs" style={{ color: stat.color }}>
-                            {stat.label}
-                          </div>
-                          <div className="text-gray-600 text-xs">
-                            {stat.avg}
-                            {stat.total !== undefined && (
-                              <div className="text-xs">T: {stat.total}</div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Footer */}
-              <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
-                <p>Página {currentPage} de {totalPages} | Formato Paisagem</p>
-              </div>
-            </div>
-          )}
-
-          {/* Table Page - Optimized for 30 rows without scrolling */}
-          {currentPage === totalPages && generateTableData && (
+          {/* Table Page - Only show if on page 2 and has data */}
+          {currentPage === 2 && generateTableData && (
             <div className="h-full flex flex-col">
               {/* Minimal Page Header */}
               <div className="border-b border-gray-200 pb-1 mb-2">

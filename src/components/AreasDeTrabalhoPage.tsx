@@ -203,20 +203,29 @@ export function AreasDeTrabalhoPage() {
       console.log('Iniciando deleção da área:', { id, nomeArea });
       const supabase = getSupabase();
       
-      // Primeiro, verificar se a área existe
-      const { data: areaExists, error: checkError } = await supabase
-        .from('area_de_trabalho')
-        .select('id, nome_area')
-        .eq('id', id)
-        .maybeSingle();
-      
-      console.log('Verificação de existência:', { areaExists, checkError });
-      
-      if (checkError || !areaExists) {
-        throw new Error(`Área não encontrada: ${checkError?.message || 'Item não existe'}`);
+      // Primeiro, deletar todas as medições que referenciam esta área
+      const { error: medicaoError } = await supabase
+        .from('medicao')
+        .delete()
+        .eq('area_de_trabalho_id', id);
+
+      if (medicaoError) {
+        console.error('Erro ao deletar medições:', medicaoError);
+        throw new Error(`Erro ao deletar medições: ${medicaoError.message}`);
       }
-      
-      // Executar a deleção
+
+      // Segundo, deletar todos os pontos de coleta desta área
+      const { error: pontosError } = await supabase
+        .from('ponto_de_coleta')
+        .delete()
+        .eq('area_de_trabalho_id', id);
+
+      if (pontosError) {
+        console.error('Erro ao deletar pontos de coleta:', pontosError);
+        throw new Error(`Erro ao deletar pontos de coleta: ${pontosError.message}`);
+      }
+
+      // Finalmente, deletar a área de trabalho
       const { error } = await supabase
         .from('area_de_trabalho')
         .delete()
@@ -225,19 +234,6 @@ export function AreasDeTrabalhoPage() {
       console.log('Resultado da deleção:', { error });
       
       if (error) throw error;
-
-      // Verificar se realmente foi deletado
-      const { data: stillExists, error: verifyError } = await supabase
-        .from('area_de_trabalho')
-        .select('id')
-        .eq('id', id)
-        .maybeSingle();
-        
-      console.log('Verificação pós-deleção:', { stillExists, verifyError });
-      
-      if (stillExists && !verifyError) {
-        throw new Error('A área não foi deletada. Possível problema de permissões.');
-      }
 
       // Mostrar mensagem de sucesso
       alert(`✅ Área "${nomeArea}" excluída com sucesso!`);

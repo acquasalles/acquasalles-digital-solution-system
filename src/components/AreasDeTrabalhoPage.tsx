@@ -203,18 +203,44 @@ export function AreasDeTrabalhoPage() {
       console.log('Iniciando deleção da área:', { id, nomeArea });
       const supabase = getSupabase();
       
-      // Primeiro, deletar todas as medições que referenciam esta área
-      const { error: medicaoError } = await supabase
+      // Primeiro, buscar todas as medições desta área para depois deletar seus itens
+      const { data: medicoesData, error: medicoesFetchError } = await supabase
         .from('medicao')
-        .delete()
+        .select('id')
         .eq('area_de_trabalho_id', id);
 
-      if (medicaoError) {
-        console.error('Erro ao deletar medições:', medicaoError);
-        throw new Error(`Erro ao deletar medições: ${medicaoError.message}`);
+      if (medicoesFetchError) {
+        console.error('Erro ao buscar medições:', medicoesFetchError);
+        throw new Error(`Erro ao buscar medições: ${medicoesFetchError.message}`);
+      }
+      
+      // Segundo, deletar todos os medicao_items que referenciam essas medições
+      if (medicoesData && medicoesData.length > 0) {
+        const medicaoIds = medicoesData.map(m => m.id);
+        
+        const { error: medicaoItemsError } = await supabase
+          .from('medicao_items')
+          .delete()
+          .in('medicao_id', medicaoIds);
+
+        if (medicaoItemsError) {
+          console.error('Erro ao deletar itens de medição:', medicaoItemsError);
+          throw new Error(`Erro ao deletar itens de medição: ${medicaoItemsError.message}`);
+        }
+        
+        // Terceiro, deletar as medições agora que seus itens foram removidos
+        const { error: medicaoError } = await supabase
+          .from('medicao')
+          .delete()
+          .eq('area_de_trabalho_id', id);
+
+        if (medicaoError) {
+          console.error('Erro ao deletar medições:', medicaoError);
+          throw new Error(`Erro ao deletar medições: ${medicaoError.message}`);
+        }
       }
 
-      // Segundo, deletar todos os pontos de coleta desta área
+      // Quarto, deletar todos os pontos de coleta desta área (CASCADE vai cuidar das fotos)
       const { error: pontosError } = await supabase
         .from('ponto_de_coleta')
         .delete()

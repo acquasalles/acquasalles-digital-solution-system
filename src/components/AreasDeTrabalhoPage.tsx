@@ -492,28 +492,7 @@ export function AreasDeTrabalhoPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Estatísticas</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-900">{areas.length}</div>
-              <div className="text-sm text-blue-700">Áreas do Cliente</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-900">
-                {clients.length}
-              </div>
-              <div className="text-sm text-green-700">Total de Clientes</div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-purple-900">
-                {selectedClient ? clients.find(c => c.id === selectedClient)?.razao_social || 'Cliente' : 'Nenhum'}
-              </div>
-              <div className="text-sm text-purple-700">Cliente Selecionado</div>
-            </div>
-          </div>
-        </div>
+        
       </div>
 
       {/* Modal de Criação/Edição de Área */}

@@ -132,6 +132,13 @@ export function useAdminData() {
         .select(`
           id,
           data_hora_medicao,
+          area_de_trabalho:area_de_trabalho_id (
+            nome_area
+          ),
+          ponto_de_coleta:ponto_de_coleta_id (
+            nome,
+            area_de_trabalho_id
+          ),
           medicao_items!inner (
             id,
             valor,
@@ -167,6 +174,13 @@ export function useAdminData() {
         };
       }
 
+      // Get area name from the data
+      const areaName = data && data.length > 0 && data[0].area_de_trabalho?.nome_area 
+        ? data[0].area_de_trabalho.nome_area 
+        : '';
+      
+      // Create chart title with area name
+      const chartTitle = areaName ? `${areaName} - ${pontoName}` : pontoName;
       // Get available measurement types for this point
       const availableTypes = new Set<string>();
       if (data) {
@@ -317,7 +331,7 @@ export function useAdminData() {
           },
           title: {
             display: true,
-            text: pontoName,
+            text: chartTitle,
             font: { 
               size: 24, 
               weight: 'bold' as const,
@@ -345,7 +359,7 @@ export function useAdminData() {
 
       return {
         id: pontoId,
-        name: pontoName,
+        name: chartTitle,
         graphData: chartData,
         graphOptions: chartOptions,
         datasetStats: stats,
@@ -401,6 +415,13 @@ export function useAdminData() {
         .select(`
           id,
           data_hora_medicao,
+          area_de_trabalho:area_de_trabalho_id (
+            nome_area
+          ),
+          ponto_de_coleta:ponto_de_coleta_id (
+            nome,
+            area_de_trabalho_id
+          ),
           medicao_items!inner (
             id,
             valor,
@@ -436,6 +457,16 @@ export function useAdminData() {
         return;
       }
 
+      // Get area name and point name from the data
+      const areaName = data && data.length > 0 && data[0].area_de_trabalho?.nome_area 
+        ? data[0].area_de_trabalho.nome_area 
+        : '';
+      const pontoName = data && data.length > 0 && data[0].ponto_de_coleta?.nome 
+        ? data[0].ponto_de_coleta.nome 
+        : 'Ponto de Coleta';
+      
+      // Create chart title with area name
+      const chartTitle = areaName ? `${areaName} - ${pontoName}` : pontoName;
       // Get available measurement types
       const availableTypes = new Set<string>();
       if (data) {
@@ -616,7 +647,19 @@ export function useAdminData() {
               );
             }
           },
-          title: { display: false }
+          title: { 
+            display: true,
+            text: chartTitle,
+            font: { 
+              size: 20, 
+              weight: 'bold' as const 
+            },
+            color: '#1f2937',
+            padding: {
+              top: 10,
+              bottom: 20
+            }
+          }
         },
         scales: {
           x: {

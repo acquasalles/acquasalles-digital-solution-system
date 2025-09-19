@@ -10,7 +10,6 @@ import { generateA4PDF } from '../lib/generateA4PDF';
 import { useClients } from '../lib/ClientsContext';
 import { WaterQualityAnalysisReport } from './WaterQualityAnalysisReport';
 import { A4ReportPreview } from './A4ReportPreview';
-import { SupabaseProjectAlignment } from './SupabaseProjectAlignment';
 import type { ReportData } from '../types/report';
 import { useIntl } from 'react-intl';
 import { WaterQualityComplianceAnalysis } from './WaterQualityComplianceAnalysis';
@@ -249,9 +248,6 @@ export function AdminPage() {
       <Navigation />
 
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Supabase Project Alignment Check */}
-        <SupabaseProjectAlignment />
-
         {(error || clientsError) && (
           <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-start">
             <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />

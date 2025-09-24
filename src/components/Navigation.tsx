@@ -10,9 +10,7 @@ export function Navigation() {
   const intl = useIntl();
   const [showCadastrosDropdown, setShowCadastrosDropdown] = useState(false);
   const [showMedicoesDropdown, setShowMedicoesDropdown] = useState(false);
-  const [showMedicoesDropdown, setShowMedicoesDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const medicoesDropdownRef = useRef<HTMLDivElement>(null);
   const medicoesDropdownRef = useRef<HTMLDivElement>(null);
 
   const isActive = (path: string) => location.pathname === path;
@@ -26,9 +24,7 @@ export function Navigation() {
       if (medicoesDropdownRef.current && !medicoesDropdownRef.current.contains(event.target as Node)) {
         setShowMedicoesDropdown(false);
       }
-      if (medicoesDropdownRef.current && !medicoesDropdownRef.current.contains(event.target as Node)) {
-        setShowMedicoesDropdown(false);
-      }
+      
     };
 
     document.addEventListener('mousedown', handleClickOutside);

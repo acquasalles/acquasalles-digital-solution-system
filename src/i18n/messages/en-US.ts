@@ -4,6 +4,8 @@ export default {
   'nav.clientUsers': 'Client Users',
   'nav.measurements': 'Measurements',
   'nav.measurements.list': 'List',
+  'nav.measurements': 'Measurements',
+  'nav.measurements.list': 'List',
   'nav.logout': 'Logout',
 
   // Auth

@@ -7,7 +7,6 @@ import { AdminPage } from './components/AdminPage';
 import { ClientUsersPage } from './components/ClientUsersPage';
 import { AreasDeTrabalhoPage } from './components/AreasDeTrabalhoPage';
 import { MedicoesListPage } from './components/MedicoesListPage';
-import { MedicoesListPage } from './components/MedicoesListPage';
 import { WaterQualityReportDemo } from './components/WaterQualityReportDemo';
 import { ClientsProvider } from './lib/ClientsContext';
 import { IntlProvider } from './i18n/IntlProvider';

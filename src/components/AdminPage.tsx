@@ -370,39 +370,60 @@ export function AdminPage() {
 
                         {/* Compact Stats Grid */}
                         <div className="p-4">
-                          <div className="grid grid-cols-2 gap-2 mb-4">
-                            {pointData.datasetStats.filter(stat => !stat.hidden).slice(0, 4).map((stat) => (
-                              <div
-                                key={`${pointData.id}-${stat.label}`}
-                                className="bg-white rounded-md border p-2 text-center"
-                                style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
-                              >
-                                <div className="text-xs font-medium text-gray-600 mb-1">
-                                  {stat.label}
-                                </div>
-                                <div className="text-sm font-semibold text-gray-900">
-                                  Avg: {stat.avg}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {stat.min} - {stat.max}
-                                </div>
-                                {stat.total !== undefined && (
-                                  <div className="text-xs font-medium text-blue-600 mt-1">
-                                    Total: {stat.total}
+                          <div className="space-y-3 mb-4">
+                            {pointData.datasetStats.filter(stat => !stat.hidden).map((stat) => {
+                              // Special handling for Volume measurements
+                              if (stat.label === 'Volume') {
+                                return (
+                                  <div
+                                    key={`${pointData.id}-${stat.label}`}
+                                    className="bg-white rounded-md border p-3"
+                                    style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
+                                  >
+                                    <div className="text-sm font-semibold text-gray-900 mb-2">
+                                      {stat.label}
+                                    </div>
+                                    <div className="space-y-1 text-xs">
+                                      <div className="text-gray-700">
+                                        <span className="font-medium">Média Diária:</span> {stat.avg} m³
+                                      </div>
+                                      <div className="text-gray-700">
+                                        <span className="font-medium">Min / Máx Diário:</span> {stat.min} - {stat.max} m³
+                                      </div>
+                                      {pointData.totalVolumeConsumed !== undefined && (
+                                        <div className="text-green-700">
+                                          <span className="font-medium">Total Consumido período:</span> {pointData.totalVolumeConsumed} m³
+                                        </div>
+                                      )}
+                                      {pointData.outorga?.volumeMax && (
+                                        <div className="text-red-700">
+                                          <span className="font-medium">Máx Outorga:</span> {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                )}
-                                {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
-                                  <div className="text-xs font-medium text-green-600 mt-1">
-                                    Consumido: {pointData.totalVolumeConsumed} m³
+                                );
+                              }
+                              
+                              // Standard handling for other measurement types
+                              return (
+                                <div
+                                  key={`${pointData.id}-${stat.label}`}
+                                  className="bg-white rounded-md border p-2 text-center"
+                                  style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
+                                >
+                                  <div className="text-xs font-medium text-gray-600 mb-1">
+                                    {stat.label}
                                   </div>
-                                )}
-                                {pointData.outorga?.volumeMax && stat.label === 'Volume' && (
-                                  <div className="text-xs font-medium text-red-600 mt-1">
-                                    Máx Outorga: {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    Avg: {stat.avg}
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                  <div className="text-xs text-gray-500">
+                                    {stat.min} - {stat.max}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
 
                           {/* Compact Chart */}

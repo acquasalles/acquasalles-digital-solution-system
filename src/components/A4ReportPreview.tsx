@@ -707,6 +707,15 @@ export function A4ReportPreview({
                                   position: 'end',
                                   backgroundColor: 'rgba(239, 68, 68, 0.8)',
                                   color: 'white',
+                                  font: { size: 7 },
+                                  padding: 3
+                                }
+                              }
+                            }
+                          } : undefined,
+                          legend: {
+                            display: true,
+                            position: 'bottom',
                             labels: {
                               font: { size: 7 },
                               padding: 3,
@@ -749,11 +758,11 @@ export function A4ReportPreview({
                             {stat.total !== undefined && (
                               <div className="text-xs">T: {stat.total}</div>
                             )}
-                            {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
-                              <div className="text-xs text-green-600">C: {pointData.totalVolumeConsumed}m³</div>
+                            {point.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
+                              <div className="text-xs text-green-600">C: {point.totalVolumeConsumed}m³</div>
                             )}
-                            {pointData.outorga?.volumeMax && stat.label === 'Volume' && (
-                              <div className="text-xs text-red-600">Máx: {pointData.outorga.volumeMax.value}{pointData.outorga.volumeMax.unit}</div>
+                            {point.outorga?.volumeMax && stat.label === 'Volume' && (
+                              <div className="text-xs text-red-600">Máx: {point.outorga.volumeMax.value}{point.outorga.volumeMax.unit}</div>
                             )}
                           </div>
                         </div>

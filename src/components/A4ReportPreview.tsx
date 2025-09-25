@@ -760,10 +760,10 @@ export function A4ReportPreview({
                             {stat.total !== undefined && (
                               <div className="text-xs">T: {stat.total}</div>
                             )}
-                            {point.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
+                            {point.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
                               <div className="text-xs text-green-600">C: {point.totalVolumeConsumed}m³</div>
                             )}
-                            {point.outorga?.volumeMax && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
+                            {point.outorga?.volumeMax && stat.label === 'Volume' && (
                               <div className="text-xs text-red-600">Máx: {point.outorga.volumeMax.value}{point.outorga.volumeMax.unit}</div>
                             )}
                           </div>

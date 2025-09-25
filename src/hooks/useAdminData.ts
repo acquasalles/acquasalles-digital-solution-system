@@ -198,6 +198,8 @@ export function useAdminData() {
         ? data[0].ponto_de_coleta.outorga 
         : null;
       
+      console.log('Outorga data for point:', pontoName, outorgaData);
+      
       // Create chart title with area name
       const chartTitle = areaName ? `${areaName} - ${pontoName}` : pontoName;
       // Get available measurement types for this point
@@ -241,6 +243,8 @@ export function useAdminData() {
         const total = type === 'Vazão' 
           ? Number(validValues.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined;
+        
+        console.log(`Dataset for ${type}:`, { min, max, avg, total, validValues: validValues.length });
 
         const color = getMeasurementColor(type);
 
@@ -259,12 +263,15 @@ export function useAdminData() {
       // Calculate total volume consumed for Volume/Vazão measurements
       let totalVolumeConsumed: number | undefined;
       const volumeDataset = datasets.find(d => d.label === 'Volume');
+      console.log('Volume dataset found:', !!volumeDataset);
       if (volumeDataset && volumeDataset.data.length > 0) {
         const validVolumeData = volumeDataset.data.filter(v => v !== 0);
+        console.log('Valid volume data points:', validVolumeData.length, validVolumeData);
         if (validVolumeData.length > 0) {
           const firstValue = validVolumeData[0];
           const lastValue = validVolumeData[validVolumeData.length - 1];
           totalVolumeConsumed = Number((lastValue - firstValue).toFixed(2));
+          console.log('Total volume consumed calculated:', { firstValue, lastValue, totalVolumeConsumed });
         }
       }
 
@@ -375,6 +382,9 @@ export function useAdminData() {
             },
             position: 'top' as const,
             align: 'center' as const
+          },
+          annotation: {
+            annotations: {}
           }
         },
         scales: {
@@ -388,12 +398,41 @@ export function useAdminData() {
         }
       };
 
+      // Add outorga annotation if volumeMax is available
+      if (outorgaData?.volumeMax?.value && (visibleMedicaoTypes.has('Vazão') || availableTypes.has('Vazão'))) {
+        console.log('Adding outorga annotation:', outorgaData.volumeMax);
+        chartOptions.plugins.annotation.annotations = {
+          volumeMaxLine: {
+            type: 'line',
+            yMin: outorgaData.volumeMax.value,
+            yMax: outorgaData.volumeMax.value,
+            borderColor: 'rgb(239, 68, 68)', // Red color
+            borderWidth: 2,
+            borderDash: [5, 5],
+            label: {
+              display: true,
+              content: `Volume Máximo Outorgado: ${outorgaData.volumeMax.value} ${outorgaData.volumeMax.unit}`,
+              position: 'end',
+              backgroundColor: 'rgba(239, 68, 68, 0.8)',
+              color: 'white',
+              font: {
+                size: 12,
+                weight: 'bold'
+              },
+              padding: 4
+            }
+          }
+        };
+      }
+
       return {
         id: pontoId,
         name: chartTitle,
         graphData: chartData,
         graphOptions: chartOptions,
         datasetStats: stats,
+        outorga: outorgaData,
+        totalVolumeConsumed,
         isLoading: false,
         error: null
       };
@@ -402,6 +441,8 @@ export function useAdminData() {
       console.error('Error generating chart for collection point:', error);
       return {
         ...initialData,
+        outorga: null,
+        totalVolumeConsumed: undefined,
         isLoading: false,
         error: intl.formatMessage({ id: 'admin.report.error.generate' })
       };
@@ -572,12 +613,15 @@ export function useAdminData() {
       // Calculate total volume consumed for Volume/Vazão measurements
       let totalVolumeConsumed: number | undefined;
       const volumeDataset = datasets.find(d => d.label === 'Volume');
+      console.log('Main function - Volume dataset found:', !!volumeDataset);
       if (volumeDataset && volumeDataset.data.length > 0) {
         const validVolumeData = volumeDataset.data.filter(v => v !== 0);
+        console.log('Main function - Valid volume data points:', validVolumeData.length);
         if (validVolumeData.length > 0) {
           const firstValue = validVolumeData[0];
           const lastValue = validVolumeData[validVolumeData.length - 1];
           totalVolumeConsumed = Number((lastValue - firstValue).toFixed(2));
+          console.log('Main function - Total volume consumed:', totalVolumeConsumed);
         }
       }
 
@@ -727,7 +771,8 @@ export function useAdminData() {
       };
 
       // Add outorga annotation if volumeMax is available
-      if (outorgaData?.volumeMax?.value && visibleMedicaoTypes.has('Vazão')) {
+      if (outorgaData?.volumeMax?.value && (availableTypes.has('Vazão') || visibleMedicaoTypes.has('Vazão'))) {
+        console.log('Main function - Adding outorga annotation:', outorgaData.volumeMax);
         baseGraphOptions.plugins.annotation.annotations = {
           volumeMaxLine: {
             type: 'line',
@@ -753,34 +798,8 @@ export function useAdminData() {
       }
 
       setGraphOptions(baseGraphOptions);
-
-      // Add outorga annotation if volumeMax is available
-      if (outorgaData?.volumeMax?.value && availableTypes.has('Vazão')) {
-        baseGraphOptions.plugins.annotation.annotations = {
-          volumeMaxLine: {
-            type: 'line',
-            yMin: outorgaData.volumeMax.value,
-            yMax: outorgaData.volumeMax.value,
-            borderColor: 'rgb(239, 68, 68)', // Red color
-            borderWidth: 2,
-            borderDash: [5, 5],
-            label: {
-              display: true,
-              content: `Volume Máximo Outorgado: ${outorgaData.volumeMax.value} ${outorgaData.volumeMax.unit}`,
-              position: 'end',
-              backgroundColor: 'rgba(239, 68, 68, 0.8)',
-              color: 'white',
-              font: {
-                size: 12,
-                weight: 'bold'
-              },
-              padding: 4
-            }
-          }
-        };
-      }
-
-      setGraphOptions(baseGraphOptions);
+      
+      console.log('Final graph options with annotations:', baseGraphOptions.plugins?.annotation);
     } catch (error) {
       console.error('Error generating graph:', error);
       setError(intl.formatMessage({ id: 'admin.report.error.generate' }));

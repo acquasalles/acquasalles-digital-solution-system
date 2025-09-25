@@ -550,10 +550,10 @@ function generateTableDataFromReport(reportData: ReportData) {
                         m.tipo === 'Hidrômetro' ? 'L' : '';
             
             const existingMeasurement = point.measurements.find(m => m.parameter === measurementType);
-            if (!existingMeasurement) {
+            if (pointData?.outorga?.volumeMax && (stat.label === 'Volume' || stat.label === 'Registro (m3)')) {
               point.measurements.push({
                 parameter: measurementType,
-                unit: unit
+            if (pointData?.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)')) {
               });
             }
           });

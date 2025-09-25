@@ -391,12 +391,12 @@ export function AdminPage() {
                                     Total: {stat.total}
                                   </div>
                                 )}
-                                {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
+                                {pointData.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
                                   <div className="text-xs font-medium text-green-600 mt-1">
                                     Consumido: {pointData.totalVolumeConsumed} m³
                                   </div>
                                 )}
-                                {pointData.outorga?.volumeMax && stat.label === 'Volume' && (
+                                {pointData.outorga?.volumeMax && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
                                   <div className="text-xs font-medium text-red-600 mt-1">
                                     Máx Outorga: {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
                                   </div>
@@ -410,7 +410,8 @@ export function AdminPage() {
                             <div className="h-48">
                               <Bar
                                 data={pointData.graphData}
-                                options={{
+                                options={(() => {
+                                  const options = {
                                   responsive: true,
                                   maintainAspectRatio: false,
                                   layout: {
@@ -445,6 +446,9 @@ export function AdminPage() {
                                       titleFont: { size: 11 },
                                       bodyFont: { size: 10 },
                                       padding: 6
+                                    },
+                                    annotation: {
+                                      annotations: {} as any
                                     }
                                   },
                                   scales: {
@@ -474,7 +478,39 @@ export function AdminPage() {
                                       borderRadius: 2
                                     }
                                   }
-                                }}
+                                };
+                                
+                                // Add outorga annotation if available
+                                if (pointData.outorga?.volumeMax?.value) {
+                                  const hasVolumeData = pointData.datasetStats.some(stat => 
+                                    (stat.label === 'Volume' || stat.label === 'Registro (m3)') && !stat.hidden
+                                  );
+                                  
+                                  if (hasVolumeData) {
+                                    (options.plugins.annotation.annotations as any) = {
+                                      volumeMaxLine: {
+                                        type: 'line',
+                                        yMin: pointData.outorga.volumeMax.value,
+                                        yMax: pointData.outorga.volumeMax.value,
+                                        borderColor: 'rgb(239, 68, 68)',
+                                        borderWidth: 1,
+                                        borderDash: [3, 3],
+                                        label: {
+                                          display: true,
+                                          content: `Máx: ${pointData.outorga.volumeMax.value}${pointData.outorga.volumeMax.unit}`,
+                                          position: 'end',
+                                          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                          color: 'white',
+                                          font: { size: 7 },
+                                          padding: 3
+                                        }
+                                      }
+                                    };
+                                  }
+                                }
+                                
+                                return options;
+                              })()}
                               />
                             </div>
                           </div>
@@ -492,7 +528,7 @@ export function AdminPage() {
                                     <span className="text-gray-900">
                                       {stat.avg} ({stat.min}-{stat.max})
                                       {stat.total !== undefined && ` | Total: ${stat.total}`}
-                                      {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && ` | Consumido: ${pointData.totalVolumeConsumed} m³`}
+                                      {pointData.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && ` | Consumido: ${pointData.totalVolumeConsumed} m³`}
                                     </span>
                                   </div>
                                 ))}

@@ -758,10 +758,10 @@ export function A4ReportPreview({
                             {stat.total !== undefined && (
                               <div className="text-xs">T: {stat.total}</div>
                             )}
-                            {point.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
+                            {point.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
                               <div className="text-xs text-green-600">C: {point.totalVolumeConsumed}m³</div>
                             )}
-                            {point.outorga?.volumeMax && stat.label === 'Volume' && (
+                            {point.outorga?.volumeMax && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
                               <div className="text-xs text-red-600">Máx: {point.outorga.volumeMax.value}{point.outorga.volumeMax.unit}</div>
                             )}
                           </div>
@@ -774,7 +774,7 @@ export function A4ReportPreview({
 
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
-                <p>Página {currentPage} de {totalPages} | Formato Paisagem</p>
+                          annotation: point.outorga?.volumeMax?.value && point.datasetStats.some(stat => (stat.label === 'Volume' || stat.label === 'Registro (m3)') && !stat.hidden) ? {
               </div>
             </div>
           )}
@@ -794,7 +794,7 @@ export function A4ReportPreview({
                   <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
                     <thead>
                       <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-1 py-1 text-left font-semibold text-gray-900" 
+                          } : { annotations: {} },
                             rowSpan={2}
                             style={{ width: '60px' }}>
                           Data
@@ -803,7 +803,9 @@ export function A4ReportPreview({
                           <th key={point.id} 
                               className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
                               colSpan={point.measurements.length}>
-                            <div className="text-xs font-bold">{point.name}</div>
+                        data={point.graphData} 
+                        options={(() => {
+                          const options = {
                           </th>
                         ))}
                       </tr>
@@ -823,7 +825,11 @@ export function A4ReportPreview({
                           ))
                         )}
                       </tr>
-                    </thead>
+                        };
+                        
+                        return options;
+                      })()}
+                      />
                     <tbody>
                       {generateTableData.rows.map((row, rowIndex) => (
                         <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -838,10 +844,10 @@ export function A4ReportPreview({
                               return (
                                 <td key={`${point.id}-${measurement.parameter}`} 
                                     className="border border-gray-300 px-1 py-1 text-center">
-                                  <div className={`font-medium ${getStatusColor(value?.status)}`} style={{ fontSize: '7px' }}>
+                            {point.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
                                     {value ? parseFloat(value.value).toFixed(2) : '-'}
                                   </div>
-                                </td>
+                            {point.outorga?.volumeMax && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
                               );
                             })
                           )}

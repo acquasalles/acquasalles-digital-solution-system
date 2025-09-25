@@ -9,7 +9,9 @@ export const measurementColors: Record<string, string> = {
   'Condutividade': 'rgb(14, 165, 233)', // Sky-500
   'Oxigênio': 'rgb(34, 197, 94)', // Green-500
   'Pressão': 'rgb(249, 115, 22)', // Orange-500
-  'TDS': 'rgb(168, 85, 247)'      // Purple-500
+  'TDS': 'rgb(168, 85, 247)',     // Purple-500
+  'Registro (m3)': 'rgb(245, 158, 11)', // Amber-500
+  'Volume': 'rgb(245, 158, 11)'   // Amber-500
 };
 
 // Fallback colors for unknown measurement types

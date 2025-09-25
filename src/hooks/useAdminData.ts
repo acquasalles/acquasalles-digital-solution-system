@@ -217,7 +217,8 @@ export function useAdminData() {
 
       // Create datasets with zero values for missing dates
       const datasets = Array.from(availableTypes).sort().map((type) => {
-        const displayName = type === 'Vazão' ? 'Volume' : type;
+        const displayName = type === 'Vazão' ? 'Volume' : 
+                           type === 'Registro (m3)' ? 'Volume' : type;
         const typeData = allDates.map(date => {
           const measurementsForDate = data?.filter(m => 
             format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
@@ -262,7 +263,8 @@ export function useAdminData() {
 
       // Calculate total volume consumed for Volume/Vazão measurements
       let totalVolumeConsumed: number | undefined;
-      const volumeDataset = datasets.find(d => d.label === 'Volume');
+      const volumeDataset = datasets.find(d => d.label === 'Volume') || 
+                           datasets.find(d => d.label === 'Registro (m3)');
       console.log('Volume dataset found:', !!volumeDataset);
       if (volumeDataset && volumeDataset.data.length > 0) {
         const validVolumeData = volumeDataset.data.filter(v => v !== 0);
@@ -283,7 +285,7 @@ export function useAdminData() {
         avg: dataset.data.some(v => v !== 0)
           ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
           : 0,
-        total: dataset.label === 'Volume'
+        total: dataset.label === 'Volume' || dataset.label === 'Registro (m3)'
           ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined,
         color: dataset.borderColor,
@@ -384,7 +386,7 @@ export function useAdminData() {
             align: 'center' as const
           },
           annotation: {
-            annotations: {}
+            annotations: {} as any
           }
         },
         scales: {
@@ -399,9 +401,9 @@ export function useAdminData() {
       };
 
       // Add outorga annotation if volumeMax is available
-      if (outorgaData?.volumeMax?.value && (visibleMedicaoTypes.has('Vazão') || availableTypes.has('Vazão'))) {
+      if (outorgaData?.volumeMax?.value && (availableTypes.has('Vazão') || availableTypes.has('Registro (m3)'))) {
         console.log('Adding outorga annotation:', outorgaData.volumeMax);
-        chartOptions.plugins.annotation.annotations = {
+        (chartOptions.plugins.annotation.annotations as any) = {
           volumeMaxLine: {
             type: 'line',
             yMin: outorgaData.volumeMax.value,
@@ -569,7 +571,8 @@ export function useAdminData() {
 
       // Create datasets with zero values for missing dates
       const datasets = Array.from(availableTypes).sort().map((type) => {
-        const displayName = type === 'Vazão' ? 'Volume' : type;
+        const displayName = type === 'Vazão' ? 'Volume' : 
+                           type === 'Registro (m3)' ? 'Volume' : type;
         const typeData = allDates.map(date => {
           const measurementsForDate = data?.filter(m => 
             format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
@@ -592,7 +595,7 @@ export function useAdminData() {
         const avg = validValues.length > 0 
           ? Number((validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2))
           : 0;
-        const total = type === 'Vazão' 
+        const total = type === 'Vazão' || type === 'Registro (m3)'
           ? Number(validValues.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined;
 
@@ -612,7 +615,8 @@ export function useAdminData() {
 
       // Calculate total volume consumed for Volume/Vazão measurements
       let totalVolumeConsumed: number | undefined;
-      const volumeDataset = datasets.find(d => d.label === 'Volume');
+      const volumeDataset = datasets.find(d => d.label === 'Volume') || 
+                           datasets.find(d => d.label === 'Registro (m3)');
       console.log('Main function - Volume dataset found:', !!volumeDataset);
       if (volumeDataset && volumeDataset.data.length > 0) {
         const validVolumeData = volumeDataset.data.filter(v => v !== 0);
@@ -633,7 +637,7 @@ export function useAdminData() {
         avg: dataset.data.some(v => v !== 0)
           ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
           : 0,
-        total: dataset.label === 'Volume'
+        total: dataset.label === 'Volume' || dataset.label === 'Registro (m3)'
           ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined,
         color: dataset.borderColor,
@@ -754,10 +758,7 @@ export function useAdminData() {
             }
           },
           annotation: {
-            annotations: {}
-          },
-          annotation: {
-            annotations: {}
+            annotations: {} as any
           }
         },
         scales: {
@@ -771,9 +772,9 @@ export function useAdminData() {
       };
 
       // Add outorga annotation if volumeMax is available
-      if (outorgaData?.volumeMax?.value && (availableTypes.has('Vazão') || visibleMedicaoTypes.has('Vazão'))) {
+      if (outorgaData?.volumeMax?.value && (availableTypes.has('Vazão') || availableTypes.has('Registro (m3)'))) {
         console.log('Main function - Adding outorga annotation:', outorgaData.volumeMax);
-        baseGraphOptions.plugins.annotation.annotations = {
+        (baseGraphOptions.plugins.annotation.annotations as any) = {
           volumeMaxLine: {
             type: 'line',
             yMin: outorgaData.volumeMax.value,

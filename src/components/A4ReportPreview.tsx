@@ -34,6 +34,17 @@ interface CollectionPointData {
     color: string;
     hidden: boolean;
   }>;
+  outorga?: {
+    volumeMax?: {
+      unit: string;
+      value: number;
+    };
+    horimetroMax?: {
+      unit: string;
+      value: number;
+    };
+  };
+  totalVolumeConsumed?: number;
   isLoading: boolean;
   error: string | null;
 }
@@ -679,20 +690,23 @@ export function A4ReportPreview({
                         }}
                         data={point.graphData} options={{
                         ...point.graphOptions,
-                        layout: {
-                          padding: {
-                            top: 5,
-                            bottom: 5,
-                            left: 5,
-                            right: 5
-                          }
-                        },
                         plugins: {
                           ...point.graphOptions?.plugins,
-                          title: { display: false },
-                          legend: { 
-                            display: true,
-                            position: 'bottom' as const,
+                          annotation: point.outorga?.volumeMax?.value && point.datasetStats.some(stat => stat.label === 'Volume' && !stat.hidden) ? {
+                            annotations: {
+                              volumeMaxLine: {
+                                type: 'line',
+                                yMin: point.outorga.volumeMax.value,
+                                yMax: point.outorga.volumeMax.value,
+                                borderColor: 'rgb(239, 68, 68)',
+                                borderWidth: 1,
+                                borderDash: [3, 3],
+                                label: {
+                                  display: true,
+                                  content: `Máx: ${point.outorga.volumeMax.value}${point.outorga.volumeMax.unit}`,
+                                  position: 'end',
+                                  backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                  color: 'white',
                             labels: {
                               font: { size: 7 },
                               padding: 3,
@@ -734,6 +748,12 @@ export function A4ReportPreview({
                             {stat.avg}
                             {stat.total !== undefined && (
                               <div className="text-xs">T: {stat.total}</div>
+                            )}
+                            {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
+                              <div className="text-xs text-green-600">C: {pointData.totalVolumeConsumed}m³</div>
+                            )}
+                            {pointData.outorga?.volumeMax && stat.label === 'Volume' && (
+                              <div className="text-xs text-red-600">Máx: {pointData.outorga.volumeMax.value}{pointData.outorga.volumeMax.unit}</div>
                             )}
                           </div>
                         </div>

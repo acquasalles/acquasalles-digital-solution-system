@@ -16,6 +16,18 @@ interface CollectionPointData {
     color: string;
     hidden: boolean;
   }>;
+  outorga?: {
+    volumeMax?: {
+      unit: string;
+      value: number;
+    };
+    horimetroMax?: {
+      unit: string;
+      value: number;
+    };
+  };
+  totalVolumeConsumed?: number;
+  chartImageUrl?: string; // URL to the generated chart image
 }
 
 interface ClientInfo {
@@ -344,7 +356,32 @@ function generateChartsPage(
       doc.setFont('helvetica', 'bold');
       doc.text(stat.label, statX + 2, statY + 1);
       doc.setFont('helvetica', 'normal');
-      doc.text(`${stat.avg}${stat.total !== undefined ? ` (T: ${stat.total})` : ''}`, statX + 2, statY + 4);
+      let statText = `${stat.avg}`;
+      if (stat.total !== undefined) {
+        statText += ` (T: ${stat.total})`;
+      }
+      
+      // Add total volume consumed for Volume measurements
+      const pointData = pageCharts.find(p => p.id === point.id);
+      if (pointData?.totalVolumeConsumed !== undefined && stat.label === 'Volume') {
+        statText += ` | C: ${pointData.totalVolumeConsumed}m³`;
+      }
+      
+      doc.text(statText, statX + 2, statY + 4);
+    });
+    
+    // Add outorga information if available
+    const pointData = pageCharts.find(p => p.id === point.id);
+    visibleStats.forEach((stat, statIndex) => {
+      const statX = x + 5 + (statIndex % 2) * (chartWidth/2 - 5);
+      const statY = y + 62 + Math.floor(statIndex / 2) * 10;
+      
+      if (pointData?.outorga?.volumeMax && stat.label === 'Volume') {
+        doc.setTextColor(239, 68, 68); // Red color
+        doc.setFontSize(7);
+        doc.text(`Máx: ${pointData.outorga.volumeMax.value}${pointData.outorga.volumeMax.unit}`, statX + 2, statY + 7);
+        doc.setTextColor(0, 0, 0); // Reset to black
+      }
     });
   });
   

@@ -391,6 +391,16 @@ export function AdminPage() {
                                     Total: {stat.total}
                                   </div>
                                 )}
+                                {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
+                                  <div className="text-xs font-medium text-green-600 mt-1">
+                                    Consumido: {pointData.totalVolumeConsumed} m³
+                                  </div>
+                                )}
+                                {pointData.outorga?.volumeMax && stat.label === 'Volume' && (
+                                  <div className="text-xs font-medium text-red-600 mt-1">
+                                    Máx Outorga: {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -482,6 +492,7 @@ export function AdminPage() {
                                     <span className="text-gray-900">
                                       {stat.avg} ({stat.min}-{stat.max})
                                       {stat.total !== undefined && ` | Total: ${stat.total}`}
+                                      {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && ` | Consumido: ${pointData.totalVolumeConsumed} m³`}
                                     </span>
                                   </div>
                                 ))}

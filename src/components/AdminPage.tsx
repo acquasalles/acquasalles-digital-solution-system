@@ -671,26 +671,16 @@ export function AdminPage() {
                               </td>
                               <td className="whitespace-nowrap px-3 py-2 text-sm text-gray-900">
                                 {ponto.nome}
-                             {pointData.datasetStats.filter(stat => !stat.hidden).reduce((uniqueStats, stat) => {
-                               // Prevent duplicate Volume cards by checking if we already have a Volume stat
-                               const isVolumeStat = stat.label === 'Volume' || stat.label === 'Registro (m3)';
-                               const hasVolumeAlready = uniqueStats.some(s => s.label === 'Volume' || s.label === 'Registro (m3)');
-                               
-                               if (isVolumeStat && hasVolumeAlready) {
-                                 return uniqueStats; // Skip this duplicate
-                               }
-                               
-                               return [...uniqueStats, stat];
-                             }, [] as typeof pointData.datasetStats).map((stat) => {
+                              </td>
                               <td className="px-3 py-2 text-sm text-gray-900">
-                               if (stat.label === 'Volume' || stat.label === 'Registro (m3)') {
+                                <div className="space-y-1">
                                   {ponto.medicoes.map((medicao, medicaoIdx) => (
                                     <div
                                       key={`${medicao.tipo}-${medicaoIdx}`}
-                                      className="inline-flex items-center bg-gray-100 px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-800"
+                                      className="inline-flex items-center bg-gray-100 px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-800 mr-2 mb-1"
                                     >
                                       {medicao.tipo === 'Vazão' ? 'Volume' : medicao.tipo}: {medicao.valor}
-                                       Volume
+                                    </div>
                                   ))}
                                 </div>
                               </td>

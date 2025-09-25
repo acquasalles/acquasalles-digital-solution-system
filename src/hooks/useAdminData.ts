@@ -298,14 +298,10 @@ export function useAdminData() {
           ? Number((validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2))
           : 0;
         
-        // Calculate total differently for Registro (m3)
-        let total: number | undefined;
-        if (type === 'Registro (m3)') {
-          // For Registro (m3), total is the sum of all daily differences (total consumption)
-          total = Number(validValues.reduce((a, b) => a + b, 0).toFixed(2));
-        } else if (type === 'Vazão') {
-          total = Number(validValues.reduce((a, b) => a + b, 0).toFixed(2));
-        }
+        // Calculate total for volume measurements
+        const total = (type === 'Registro (m3)' || type === 'Vazão')
+          ? Number(validValues.reduce((a, b) => a + b, 0).toFixed(2))
+          : undefined;
         
         console.log(`Dataset for ${type}:`, { min, max, avg, total, validValues: validValues.length });
 
@@ -325,10 +321,9 @@ export function useAdminData() {
 
       // Calculate total volume consumed for Volume/Vazão measurements
       let totalVolumeConsumed: number | undefined;
-      const volumeDataset = datasets.find(d => d.label === 'Volume');
+      const volumeDataset = datasets.find(d => d.label === 'Volume' || d.label === 'Registro (m3)');
       console.log('Volume dataset found:', !!volumeDataset);
       if (volumeDataset && volumeDataset.data.length > 0) {
-        // For daily differences, total consumption is the sum of all daily differences
         const validVolumeData = volumeDataset.data.filter(v => v !== 0);
         if (validVolumeData.length > 0) {
           totalVolumeConsumed = Number(validVolumeData.reduce((a, b) => a + b, 0).toFixed(2));
@@ -337,14 +332,22 @@ export function useAdminData() {
       }
 
       // Calculate stats
-      const stats = datasets.map(dataset => ({
+      const stats = datasets
+        .filter((dataset, index, arr) => {
+          // Remove duplicates - keep only one Volume dataset
+          if (dataset.label === 'Volume') {
+            return arr.findIndex(d => d.label === 'Volume') === index;
+          }
+          return true;
+        })
+        .map(dataset => ({
         label: dataset.label,
         min: Math.min(...dataset.data.filter(v => v !== 0)) || 0,
         max: Math.max(...dataset.data) || 0,
         avg: dataset.data.some(v => v !== 0)
           ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
           : 0,
-        total: dataset.label === 'Volume'
+        total: (dataset.label === 'Volume' || dataset.label === 'Registro (m3)')
           ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined,
         color: dataset.borderColor,

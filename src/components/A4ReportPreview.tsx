@@ -688,62 +688,64 @@ export function A4ReportPreview({
                             registerChart(point.id, ref);
                           }
                         }}
-                        data={point.graphData} options={{
-                        ...point.graphOptions,
-                        plugins: {
-                          ...point.graphOptions?.plugins,
-                          annotation: point.outorga?.volumeMax?.value && point.datasetStats.some(stat => stat.label === 'Volume' && !stat.hidden) ? {
-                            annotations: {
-                              volumeMaxLine: {
-                                type: 'line',
-                                yMin: point.outorga.volumeMax.value,
-                                yMax: point.outorga.volumeMax.value,
-                                borderColor: 'rgb(239, 68, 68)',
-                                borderWidth: 1,
-                                borderDash: [3, 3],
-                                label: {
-                                  display: true,
-                                  content: `Máx: ${point.outorga.volumeMax.value}${point.outorga.volumeMax.unit}`,
-                                  position: 'end',
-                                  backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                                  color: 'white',
-                                  font: { size: 7 },
-                                  padding: 3
+                        data={point.graphData} 
+                        options={{
+                          ...point.graphOptions,
+                          plugins: {
+                            ...point.graphOptions?.plugins,
+                            annotation: point.outorga?.volumeMax?.value && point.datasetStats.some(stat => stat.label === 'Volume' && !stat.hidden) ? {
+                              annotations: {
+                                volumeMaxLine: {
+                                  type: 'line',
+                                  yMin: point.outorga.volumeMax.value,
+                                  yMax: point.outorga.volumeMax.value,
+                                  borderColor: 'rgb(239, 68, 68)',
+                                  borderWidth: 1,
+                                  borderDash: [3, 3],
+                                  label: {
+                                    display: true,
+                                    content: `Máx: ${point.outorga.volumeMax.value}${point.outorga.volumeMax.unit}`,
+                                    position: 'end',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                    color: 'white',
+                                    font: { size: 7 },
+                                    padding: 3
+                                  }
                                 }
                               }
-                            }
-                          } : undefined,
-                          legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: {
-                              font: { size: 7 },
-                              padding: 3,
-                              usePointStyle: true,
-                              boxWidth: 5,
-                              boxHeight: 5
-                            }
-                          }
-                        },
-                        scales: {
-                          ...point.graphOptions?.scales,
-                          x: {
-                            ...point.graphOptions?.scales?.x,
-                            ticks: {
-                              font: { size: 7 },
-                              maxRotation: 45,
-                              maxTicksLimit: 5
+                            } : undefined,
+                            legend: {
+                              display: true,
+                              position: 'bottom',
+                              labels: {
+                                font: { size: 7 },
+                                padding: 3,
+                                usePointStyle: true,
+                                boxWidth: 5,
+                                boxHeight: 5
+                              }
                             }
                           },
-                          y: {
-                            ...point.graphOptions?.scales?.y,
-                            ticks: {
-                              font: { size: 7 },
-                              maxTicksLimit: 5
+                          scales: {
+                            ...point.graphOptions?.scales,
+                            x: {
+                              ...point.graphOptions?.scales?.x,
+                              ticks: {
+                                font: { size: 7 },
+                                maxRotation: 45,
+                                maxTicksLimit: 5
+                              }
+                            },
+                            y: {
+                              ...point.graphOptions?.scales?.y,
+                              ticks: {
+                                font: { size: 7 },
+                                maxTicksLimit: 5
+                              }
                             }
                           }
-                        }
-                      }} />
+                        }} 
+                      />
                     </div>
                     
                     {/* Smaller stats summary below chart */}
@@ -774,7 +776,7 @@ export function A4ReportPreview({
 
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
-                          annotation: point.outorga?.volumeMax?.value && point.datasetStats.some(stat => (stat.label === 'Volume' || stat.label === 'Registro (m3)') && !stat.hidden) ? {
+                <p>Página {currentPage} de {totalPages} | Gráficos de Monitoramento</p>
               </div>
             </div>
           )}
@@ -794,7 +796,7 @@ export function A4ReportPreview({
                   <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
                     <thead>
                       <tr className="bg-gray-100">
-                          } : { annotations: {} },
+                        <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
                             rowSpan={2}
                             style={{ width: '60px' }}>
                           Data
@@ -803,9 +805,7 @@ export function A4ReportPreview({
                           <th key={point.id} 
                               className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
                               colSpan={point.measurements.length}>
-                        data={point.graphData} 
-                        options={(() => {
-                          const options = {
+                            {point.name}
                           </th>
                         ))}
                       </tr>
@@ -825,11 +825,7 @@ export function A4ReportPreview({
                           ))
                         )}
                       </tr>
-                        };
-                        
-                        return options;
-                      })()}
-                      />
+                    </thead>
                     <tbody>
                       {generateTableData.rows.map((row, rowIndex) => (
                         <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
@@ -844,10 +840,10 @@ export function A4ReportPreview({
                               return (
                                 <td key={`${point.id}-${measurement.parameter}`} 
                                     className="border border-gray-300 px-1 py-1 text-center">
-                            {point.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
+                                  <div className="text-xs text-gray-900">
                                     {value ? parseFloat(value.value).toFixed(2) : '-'}
                                   </div>
-                            {point.outorga?.volumeMax && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
+                                </td>
                               );
                             })
                           )}

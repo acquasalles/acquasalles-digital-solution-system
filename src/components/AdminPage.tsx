@@ -391,12 +391,12 @@ export function AdminPage() {
                                     Total: {stat.total}
                                   </div>
                                 )}
-                                {pointData.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
+                                {pointData.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
                                   <div className="text-xs font-medium text-green-600 mt-1">
                                     Consumido: {pointData.totalVolumeConsumed} m³
                                   </div>
                                 )}
-                                {pointData.outorga?.volumeMax && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && (
+                                {pointData.outorga?.volumeMax && stat.label === 'Volume' && (
                                   <div className="text-xs font-medium text-red-600 mt-1">
                                     Máx Outorga: {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
                                   </div>

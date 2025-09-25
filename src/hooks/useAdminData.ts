@@ -215,25 +215,81 @@ export function useAdminData() {
         });
       }
 
-      // Create datasets with zero values for missing dates
+      // Create datasets - special handling for Registro (m3) to show daily differences
       const datasets = Array.from(availableTypes).sort().map((type) => {
         const displayName = type === 'Vazão' ? 'Volume' : 
                            type === 'Registro (m3)' ? 'Volume' : type;
-        const typeData = allDates.map(date => {
-          const measurementsForDate = data?.filter(m => 
-            format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
-          ) || [];
+        
+        let typeData: number[];
+        
+        if (type === 'Registro (m3)') {
+          // Special handling for Registro (m3) - calculate daily differences
+          console.log('Processing Registro (m3) for daily differences');
           
-          const values = measurementsForDate.flatMap(m => 
-            m.medicao_items
-              .filter(item => item.tipo_medicao?.nome === type)
-              .map(item => parseFloat(item.valor))
-          );
+          // First, get the accumulated values for each day
+          const accumulatedValues = allDates.map(date => {
+            const measurementsForDate = data?.filter(m => 
+              format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
+            ) || [];
+            
+            const values = measurementsForDate.flatMap(m => 
+              m.medicao_items
+                .filter(item => item.tipo_medicao?.nome === type)
+                .map(item => parseFloat(item.valor))
+            );
 
-          if (values.length === 0) return 0;
-          const average = values.reduce((a, b) => a + b, 0) / values.length;
-          return Number(average.toFixed(2));
-        });
+            // Return the last (highest) value for the day, or null if no data
+            return values.length > 0 ? Math.max(...values) : null;
+          });
+          
+          console.log('Accumulated values by date:', accumulatedValues);
+          
+          // Fill gaps with previous known values
+          let lastKnownValue: number | null = null;
+          const filledValues = accumulatedValues.map(value => {
+            if (value !== null) {
+              lastKnownValue = value;
+              return value;
+            }
+            return lastKnownValue;
+          });
+          
+          console.log('Filled accumulated values:', filledValues);
+          
+          // Calculate daily differences
+          typeData = filledValues.map((currentValue, index) => {
+            if (index === 0 || currentValue === null) {
+              return 0; // First day or no data
+            }
+            
+            const previousValue = filledValues[index - 1];
+            if (previousValue === null) {
+              return 0;
+            }
+            
+            const difference = currentValue - previousValue;
+            return Number(Math.max(0, difference).toFixed(2)); // Ensure non-negative
+          });
+          
+          console.log('Daily differences calculated:', typeData);
+        } else {
+          // Standard handling for other measurement types (average per day)
+          typeData = allDates.map(date => {
+            const measurementsForDate = data?.filter(m => 
+              format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
+            ) || [];
+            
+            const values = measurementsForDate.flatMap(m => 
+              m.medicao_items
+                .filter(item => item.tipo_medicao?.nome === type)
+                .map(item => parseFloat(item.valor))
+            );
+
+            if (values.length === 0) return 0;
+            const average = values.reduce((a, b) => a + b, 0) / values.length;
+            return Number(average.toFixed(2));
+          });
+        }
 
         const validValues = typeData.filter(v => v !== 0);
         const min = validValues.length > 0 ? Math.min(...validValues) : 0;
@@ -241,9 +297,15 @@ export function useAdminData() {
         const avg = validValues.length > 0 
           ? Number((validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2))
           : 0;
-        const total = type === 'Vazão' 
-          ? Number(validValues.reduce((a, b) => a + b, 0).toFixed(2))
-          : undefined;
+        
+        // Calculate total differently for Registro (m3)
+        let total: number | undefined;
+        if (type === 'Registro (m3)') {
+          // For Registro (m3), total is the sum of all daily differences (total consumption)
+          total = Number(validValues.reduce((a, b) => a + b, 0).toFixed(2));
+        } else if (type === 'Vazão') {
+          total = Number(validValues.reduce((a, b) => a + b, 0).toFixed(2));
+        }
         
         console.log(`Dataset for ${type}:`, { min, max, avg, total, validValues: validValues.length });
 
@@ -263,17 +325,14 @@ export function useAdminData() {
 
       // Calculate total volume consumed for Volume/Vazão measurements
       let totalVolumeConsumed: number | undefined;
-      const volumeDataset = datasets.find(d => d.label === 'Volume') || 
-                           datasets.find(d => d.label === 'Registro (m3)');
+      const volumeDataset = datasets.find(d => d.label === 'Volume');
       console.log('Volume dataset found:', !!volumeDataset);
       if (volumeDataset && volumeDataset.data.length > 0) {
+        // For daily differences, total consumption is the sum of all daily differences
         const validVolumeData = volumeDataset.data.filter(v => v !== 0);
-        console.log('Valid volume data points:', validVolumeData.length, validVolumeData);
         if (validVolumeData.length > 0) {
-          const firstValue = validVolumeData[0];
-          const lastValue = validVolumeData[validVolumeData.length - 1];
-          totalVolumeConsumed = Number((lastValue - firstValue).toFixed(2));
-          console.log('Total volume consumed calculated:', { firstValue, lastValue, totalVolumeConsumed });
+          totalVolumeConsumed = Number(validVolumeData.reduce((a, b) => a + b, 0).toFixed(2));
+          console.log('Total volume consumed (sum of daily differences):', totalVolumeConsumed);
         }
       }
 
@@ -285,7 +344,7 @@ export function useAdminData() {
         avg: dataset.data.some(v => v !== 0)
           ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
           : 0,
-        total: dataset.label === 'Volume' || dataset.label === 'Registro (m3)'
+        total: dataset.label === 'Volume'
           ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined,
         color: dataset.borderColor,
@@ -615,17 +674,14 @@ export function useAdminData() {
 
       // Calculate total volume consumed for Volume/Vazão measurements
       let totalVolumeConsumed: number | undefined;
-      const volumeDataset = datasets.find(d => d.label === 'Volume') || 
-                           datasets.find(d => d.label === 'Registro (m3)');
+      const volumeDataset = datasets.find(d => d.label === 'Volume');
       console.log('Main function - Volume dataset found:', !!volumeDataset);
       if (volumeDataset && volumeDataset.data.length > 0) {
+        // For daily differences, total consumption is the sum of all daily differences
         const validVolumeData = volumeDataset.data.filter(v => v !== 0);
-        console.log('Main function - Valid volume data points:', validVolumeData.length);
         if (validVolumeData.length > 0) {
-          const firstValue = validVolumeData[0];
-          const lastValue = validVolumeData[validVolumeData.length - 1];
-          totalVolumeConsumed = Number((lastValue - firstValue).toFixed(2));
-          console.log('Main function - Total volume consumed:', totalVolumeConsumed);
+          totalVolumeConsumed = Number(validVolumeData.reduce((a, b) => a + b, 0).toFixed(2));
+          console.log('Main function - Total volume consumed (sum of daily differences):', totalVolumeConsumed);
         }
       }
 
@@ -637,7 +693,7 @@ export function useAdminData() {
         avg: dataset.data.some(v => v !== 0)
           ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
           : 0,
-        total: dataset.label === 'Volume' || dataset.label === 'Registro (m3)'
+        total: dataset.label === 'Volume'
           ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined,
         color: dataset.borderColor,
@@ -772,7 +828,7 @@ export function useAdminData() {
       };
 
       // Add outorga annotation if volumeMax is available
-      if (outorgaData?.volumeMax?.value && (availableTypes.has('Vazão') || availableTypes.has('Registro (m3)'))) {
+      if (outorgaData?.volumeMax?.value && availableTypes.has('Registro (m3)')) {
         console.log('Main function - Adding outorga annotation:', outorgaData.volumeMax);
         (baseGraphOptions.plugins.annotation.annotations as any) = {
           volumeMaxLine: {

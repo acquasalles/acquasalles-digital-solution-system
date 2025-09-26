@@ -370,29 +370,60 @@ export function AdminPage() {
 
                         {/* Compact Stats Grid */}
                         <div className="p-4">
-                          <div className="grid grid-cols-2 gap-2 mb-4">
-                            {pointData.datasetStats.filter(stat => !stat.hidden).slice(0, 4).map((stat) => (
-                              <div
-                                key={`${pointData.id}-${stat.label}`}
-                                className="bg-white rounded-md border p-2 text-center"
-                                style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
-                              >
-                                <div className="text-xs font-medium text-gray-600 mb-1">
-                                  {stat.label}
-                                </div>
-                                <div className="text-sm font-semibold text-gray-900">
-                                  Avg: {stat.avg}
-                                </div>
-                                <div className="text-xs text-gray-500">
-                                  {stat.min} - {stat.max}
-                                </div>
-                                {stat.total !== undefined && (
-                                  <div className="text-xs font-medium text-blue-600 mt-1">
-                                    Total: {stat.total}
+                          <div className="space-y-3 mb-4">
+                            {pointData.datasetStats.filter(stat => !stat.hidden).map((stat) => {
+                              // Special handling for Volume measurements
+                              if (stat.label === 'Volume') {
+                                return (
+                                  <div
+                                    key={`${pointData.id}-${stat.label}`}
+                                    className="bg-white rounded-md border p-3"
+                                    style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
+                                  >
+                                    <div className="text-sm font-semibold text-gray-900 mb-2">
+                                      {stat.label}
+                                    </div>
+                                    <div className="space-y-1 text-xs">
+                                      <div className="text-gray-700">
+                                        <span className="font-medium">Média Diária:</span> {stat.avg} m³
+                                      </div>
+                                      <div className="text-gray-700">
+                                        <span className="font-medium">Min / Máx Diário:</span> {stat.min} - {stat.max} m³
+                                      </div>
+                                      {pointData.totalVolumeConsumed !== undefined && (
+                                        <div className="text-green-700">
+                                          <span className="font-medium">Total Consumido período:</span> {pointData.totalVolumeConsumed} m³
+                                        </div>
+                                      )}
+                                      {pointData.outorga?.volumeMax && (
+                                        <div className="text-red-700">
+                                          <span className="font-medium">Máx Outorga:</span> {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                );
+                              }
+                              
+                              // Standard handling for other measurement types
+                              return (
+                                <div
+                                  key={`${pointData.id}-${stat.label}`}
+                                  className="bg-white rounded-md border p-2 text-center"
+                                  style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
+                                >
+                                  <div className="text-xs font-medium text-gray-600 mb-1">
+                                    {stat.label}
+                                  </div>
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    Avg: {stat.avg}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {stat.min} - {stat.max}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
 
                           {/* Compact Chart */}
@@ -400,7 +431,8 @@ export function AdminPage() {
                             <div className="h-48">
                               <Bar
                                 data={pointData.graphData}
-                                options={{
+                                options={(() => {
+                                  const options = {
                                   responsive: true,
                                   maintainAspectRatio: false,
                                   layout: {
@@ -435,6 +467,9 @@ export function AdminPage() {
                                       titleFont: { size: 11 },
                                       bodyFont: { size: 10 },
                                       padding: 6
+                                    },
+                                    annotation: {
+                                      annotations: {} as any
                                     }
                                   },
                                   scales: {
@@ -464,7 +499,39 @@ export function AdminPage() {
                                       borderRadius: 2
                                     }
                                   }
-                                }}
+                                };
+                                
+                                // Add outorga annotation if available
+                                if (pointData.outorga?.volumeMax?.value) {
+                                  const hasVolumeData = pointData.datasetStats.some(stat => 
+                                    (stat.label === 'Volume' || stat.label === 'Registro (m3)') && !stat.hidden
+                                  );
+                                  
+                                  if (hasVolumeData) {
+                                    (options.plugins.annotation.annotations as any) = {
+                                      volumeMaxLine: {
+                                        type: 'line',
+                                        yMin: pointData.outorga.volumeMax.value,
+                                        yMax: pointData.outorga.volumeMax.value,
+                                        borderColor: 'rgb(239, 68, 68)',
+                                        borderWidth: 1,
+                                        borderDash: [3, 3],
+                                        label: {
+                                          display: true,
+                                          content: `Máx: ${pointData.outorga.volumeMax.value}${pointData.outorga.volumeMax.unit}`,
+                                          position: 'end',
+                                          backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                                          color: 'white',
+                                          font: { size: 7 },
+                                          padding: 3
+                                        }
+                                      }
+                                    };
+                                  }
+                                }
+                                
+                                return options;
+                              })()}
                               />
                             </div>
                           </div>
@@ -482,6 +549,7 @@ export function AdminPage() {
                                     <span className="text-gray-900">
                                       {stat.avg} ({stat.min}-{stat.max})
                                       {stat.total !== undefined && ` | Total: ${stat.total}`}
+                                      {pointData.totalVolumeConsumed !== undefined && (stat.label === 'Volume' || stat.label === 'Registro (m3)') && ` | Consumido: ${pointData.totalVolumeConsumed} m³`}
                                     </span>
                                   </div>
                                 ))}
@@ -605,11 +673,11 @@ export function AdminPage() {
                                 {ponto.nome}
                               </td>
                               <td className="px-3 py-2 text-sm text-gray-900">
-                                <div className="flex flex-wrap gap-2">
+                                <div className="space-y-1">
                                   {ponto.medicoes.map((medicao, medicaoIdx) => (
                                     <div
                                       key={`${medicao.tipo}-${medicaoIdx}`}
-                                      className="inline-flex items-center bg-gray-100 px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-800"
+                                      className="inline-flex items-center bg-gray-100 px-2.5 py-0.5 rounded-full text-xs font-medium text-gray-800 mr-2 mb-1"
                                     >
                                       {medicao.tipo === 'Vazão' ? 'Volume' : medicao.tipo}: {medicao.valor}
                                     </div>

@@ -85,21 +85,13 @@ export function AdminPage() {
   }, [isAdmin, user, fetchClients]);
   // Effect to refresh report when client changes and report is open
   useEffect(() => {
-    const refreshReportIfOpen = async () => {
-      if (selectedClient && (showA4Report || reportData)) {
-        try {
-          // Clear existing report data first
-          setIsLoading(prev => ({ ...prev, report: true }));
-          
-          // Generate new report for the selected client
-          await handleGenerateReport(clients);
-        } catch (error) {
-          console.error('Error refreshing report for new client:', error);
-        }
-      }
-    };
-
-    refreshReportIfOpen();
+    // Close A4 report when client changes to avoid showing stale data
+    if (showA4Report) {
+      setShowA4Report(false);
+    }
+    if (showComplianceAnalysis) {
+      setShowComplianceAnalysis(false);
+    }
   }, [selectedClient]); // Only trigger when selectedClient changes
 
   const handleDownloadPDF = async () => {
@@ -193,22 +185,28 @@ export function AdminPage() {
     setShowComplianceAnalysis(true);
   };
   const handleShowA4Report = async () => {
-    // Always ensure report data is generated before showing A4 preview
-    if (selectedClient) {
-      try {
-        setIsLoading(prev => ({ ...prev, report: true }));
-        await handleGenerateReport(clients);
-      } catch (error) {
-        console.error('Error generating report data for A4 preview:', error);
-        alert('Error generating report data. Please try again.');
-        return;
-      } finally {
-        setIsLoading(prev => ({ ...prev, report: false }));
-      }
+    if (!selectedClient) {
+      alert('Por favor, selecione um cliente primeiro.');
+      return;
     }
     
-    // Wait a bit to ensure state is updated
-    setTimeout(() => {
+    try {
+      setIsLoading(prev => ({ ...prev, report: true }));
+      await handleGenerateReport(clients);
+      
+      // Only show A4 report if we have valid report data
+      if (reportData && reportData.datas) {
+        setShowA4Report(true);
+      } else {
+        alert('Não foi possível gerar os dados do relatório. Verifique se existem medições para o período selecionado.');
+      }
+    } catch (error) {
+      console.error('Error generating report data for A4 preview:', error);
+      alert('Erro ao gerar dados do relatório. Tente novamente.');
+    } finally {
+      setIsLoading(prev => ({ ...prev, report: false }));
+    }
+  };
       setShowA4Report(true);
     }, 100);
   };

@@ -933,10 +933,7 @@ export function useAdminData() {
 
       const formattedData = {
         ...formatData(measurementsResult.data, clientResult.data.razao_social),
-        graphOptions: baseGraphOptions,
         endereco: clientResult.data.endereco,
-        outorga: outorgaData,
-        totalVolumeConsumed,
         bairro: clientResult.data.bairro,
         cidade: clientResult.data.cidade
       };
@@ -944,7 +941,11 @@ export function useAdminData() {
       setReportData(formattedData);
     } catch (error) {
       setError(intl.formatMessage({ id: 'admin.report.error.generate' }));
-      setReportData(null);
+      // Set empty report data instead of null to avoid type issues
+      setReportData({
+        cliente: clients.find(c => c.id === selectedClient)?.razao_social || 'Cliente',
+        datas: []
+      });
     } finally {
       setIsLoading(prev => ({ ...prev, report: false }));
     }

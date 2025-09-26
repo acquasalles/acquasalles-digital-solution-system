@@ -256,60 +256,6 @@ export function A4ReportPreview({
   const generateTableData = useMemo(() => {
     console.log('generateTableData - Starting generation');
     console.log('reportData available:', !!reportData);
-    console.log('collectionPointsData available:', collectionPointsData.length);
-    
-    // If no reportData but we have collection points data, try to generate from charts
-    if (!reportData && collectionPointsData.length > 0) {
-      console.log('No reportData, attempting to generate from collection points data');
-      
-      // Create a simplified table structure from collection points
-      const collectionPointsMap = new Map<string, {
-        id: string;
-        name: string;
-        measurements: Array<{
-          parameter: string;
-          unit: string;
-        }>;
-      }>();
-      
-      collectionPointsData.forEach(point => {
-        if (point.datasetStats && point.datasetStats.length > 0) {
-          collectionPointsMap.set(point.id, {
-            id: point.id,
-            name: point.name,
-            measurements: point.datasetStats
-              .filter(stat => !stat.hidden)
-              .map(stat => ({
-                parameter: stat.label,
-                unit: stat.label === 'pH' ? '' : 
-                      stat.label === 'Cloro' ? 'mg/L' : 
-                      stat.label === 'Turbidez' ? 'NTU' : 
-                      stat.label === 'Volume' ? 'L' : ''
-              }))
-          });
-        }
-      });
-      
-      if (collectionPointsMap.size > 0) {
-        console.log('Generated fallback table structure from collection points');
-        return {
-          headers: ['Data', ...Array.from(collectionPointsMap.values()).map(cp => cp.name)],
-          collectionPoints: Array.from(collectionPointsMap.values()),
-          rows: [{
-            date: format(new Date(), 'dd/MM/yyyy'),
-            pointData: new Map(Array.from(collectionPointsMap.entries()).map(([id, point]) => [
-              id,
-              point.measurements.map(m => ({
-                parameter: m.parameter,
-                value: 'N/A',
-                unit: m.unit,
-                status: 'normal' as const
-              }))
-            ]))
-          }]
-        };
-      }
-    }
     
     if (!reportData || !reportData.datas || reportData.datas.length === 0) {
       console.log('No reportData available for table generation');
@@ -756,10 +702,6 @@ export function A4ReportPreview({
               })() ? (
                 /* Optimized Data Table for 30 rows */
                 <div className="flex-1 overflow-hidden">
-                  {/* Debug info */}
-                  <div className="mb-2 text-xs text-gray-500">
-                    Debug: {generateTableData.collectionPoints.length} pontos, {generateTableData.rows.length} linhas
-                  </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
                       <thead>
@@ -805,11 +747,17 @@ export function A4ReportPreview({
                                 const pointData = row.pointData.get(point.id) || [];
                                 const value = pointData.find(v => v.parameter === measurement.parameter);
                                 
+                                // Ensure we display valid numbers or '-'
+                                let displayValue = '-';
+                                if (value && value.value && !isNaN(parseFloat(value.value))) {
+                                  displayValue = parseFloat(value.value).toFixed(2);
+                                }
+                                
                                 return (
                                   <td key={`${point.id}-${measurement.parameter}`} 
                                       className="border border-gray-300 px-1 py-1 text-center">
                                     <div className="text-xs text-gray-900">
-                                      {value ? parseFloat(value.value).toFixed(2) : '-'}
+                                      {displayValue}
                                     </div>
                                   </td>
                                 );
@@ -828,34 +776,6 @@ export function A4ReportPreview({
                     <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum Dado de Medição</h3>
                     <p className="text-gray-600">Não foram encontrados dados de medição para o período selecionado.</p>
-                    
-                    {clientId && (
-                      <div className="mb-4">
-                        <p className="text-sm text-gray-600 mb-2">
-                          Clique no botão abaixo para gerar os dados do relatório:
-                        </p>
-                        <button
-                          onClick={() => window.location.reload()}
-                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                        >
-                          Recarregar e Gerar Dados
-                        </button>
-                      </div>
-                    )}
-                    
-                    <div className="mt-4 text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                      <p>Debug Info:</p>
-                      <p>reportData: {reportData ? 'Disponível' : 'Não disponível'}</p>
-                      {reportData && (
-                        <>
-                          <p>reportData.datas: {reportData.datas?.length || 0} entradas</p>
-                          <p>Cliente: {reportData.cliente}</p>
-                        </>
-                      )}
-                      <p>generateTableData: {generateTableData ? 'Gerado' : 'Não gerado'}</p>
-                      <p>collectionPointsData: {collectionPointsData.length} pontos</p>
-                      <p>clientId: {clientId || 'Não disponível'}</p>
-                    </div>
                   </div>
                 </div>
               )}

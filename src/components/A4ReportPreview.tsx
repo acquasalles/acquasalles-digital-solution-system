@@ -254,7 +254,12 @@ export function A4ReportPreview({
 
   // Generate table data from reportData with improved merged columns logic
   const generateTableData = useMemo(() => {
-    if (!reportData) return null;
+    if (!reportData || !reportData.datas || reportData.datas.length === 0) {
+      console.log('No reportData available for table generation');
+      return null;
+    }
+
+    console.log('Generating table data from reportData:', reportData);
 
     const collectionPointsMap = new Map<string, {
       id: string;
@@ -277,9 +282,11 @@ export function A4ReportPreview({
 
     // First pass: collect all collection points and their measurement types
     reportData.datas.forEach(dateEntry => {
+      console.log('Processing date entry:', dateEntry.data, 'with areas:', dateEntry.area.length);
       dateEntry.area.forEach(area => {
         area.pontos_de_coleta.forEach(ponto => {
           const pointId = `${area.nome}-${ponto.nome}`;
+          console.log('Processing point:', pointId, 'with measurements:', ponto.medicoes.length);
           
           // Add collection point if not already added
           if (!collectionPointsMap.has(pointId)) {
@@ -310,6 +317,7 @@ export function A4ReportPreview({
                   parameter: measurementType,
                   unit: unit
                 });
+                console.log('Added measurement type:', measurementType, 'to point:', pointId);
               }
             });
         });
@@ -354,6 +362,7 @@ export function A4ReportPreview({
                 unit: unit,
                 status: 'normal' as const
               });
+              console.log('Added measurement data:', measurementType, m.valor, 'for point:', pointId, 'on date:', dateEntry.data);
             });
         });
       });
@@ -369,6 +378,16 @@ export function A4ReportPreview({
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 30); // Show 30 rows for the table
 
+    console.log('Final table data:', {
+      collectionPointsCount: collectionPoints.length,
+      rowsCount: rows.length,
+      collectionPoints: collectionPoints.map(cp => ({ name: cp.name, measurementCount: cp.measurements.length })),
+      sampleRows: rows.slice(0, 2).map(row => ({ 
+        date: row.date, 
+        pointDataSize: row.pointData.size,
+        pointDataKeys: Array.from(row.pointData.keys())
+      }))
+    });
     return {
       headers: ['Data', ...collectionPoints.map(cp => cp.name)],
       collectionPoints,
@@ -670,9 +689,20 @@ export function A4ReportPreview({
                 <p className="text-gray-600 text-xs">Registro detalhado das medições por ponto de coleta (30 registros)</p>
               </div>
 
-              {generateTableData ? (
+              {(() => {
+                console.log('Rendering table page, generateTableData:', !!generateTableData);
+                console.log('reportData available:', !!reportData);
+                if (reportData) {
+                  console.log('reportData.datas length:', reportData.datas?.length || 0);
+                }
+                return generateTableData;
+              })() ? (
                 /* Optimized Data Table for 30 rows */
                 <div className="flex-1 overflow-hidden">
+                  {/* Debug info */}
+                  <div className="mb-2 text-xs text-gray-500">
+                    Debug: {generateTableData.collectionPoints.length} pontos, {generateTableData.rows.length} linhas
+                  </div>
                   <div className="overflow-x-auto">
                     <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
                       <thead>
@@ -741,6 +771,17 @@ export function A4ReportPreview({
                     <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum Dado de Medição</h3>
                     <p className="text-gray-600">Não foram encontrados dados de medição para o período selecionado.</p>
+                    <div className="mt-4 text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                      <p>Debug Info:</p>
+                      <p>reportData: {reportData ? 'Disponível' : 'Não disponível'}</p>
+                      {reportData && (
+                        <>
+                          <p>reportData.datas: {reportData.datas?.length || 0} entradas</p>
+                          <p>Cliente: {reportData.cliente}</p>
+                        </>
+                      )}
+                      <p>generateTableData: {generateTableData ? 'Gerado' : 'Não gerado'}</p>
+                    </div>
                   </div>
                 </div>
               )}

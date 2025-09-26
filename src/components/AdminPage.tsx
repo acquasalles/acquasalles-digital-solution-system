@@ -46,7 +46,7 @@ export function AdminPage() {
   const [showA4Report, setShowA4Report] = useState(false);
   const [showComplianceAnalysis, setShowComplianceAnalysis] = useState(false);
   const { user, isAdmin } = useAuth();
-  const intl = useIntl();
+  const f = useIntl();
   
   const {
     selectedClient,

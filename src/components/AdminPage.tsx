@@ -193,8 +193,8 @@ export function AdminPage() {
     setShowComplianceAnalysis(true);
   };
   const handleShowA4Report = async () => {
-    // Ensure report data is generated before showing A4 preview
-    if (!reportData && selectedClient) {
+    // Always ensure report data is generated before showing A4 preview
+    if (selectedClient) {
       try {
         setIsLoading(prev => ({ ...prev, report: true }));
         await handleGenerateReport(clients);
@@ -206,7 +206,11 @@ export function AdminPage() {
         setIsLoading(prev => ({ ...prev, report: false }));
       }
     }
-    setShowA4Report(true);
+    
+    // Wait a bit to ensure state is updated
+    setTimeout(() => {
+      setShowA4Report(true);
+    }, 100);
   };
 
   // Handle client selection change

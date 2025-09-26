@@ -245,16 +245,11 @@ export function A4ReportPreview({
     point => point.graphData && !point.error && !point.isLoading
   );
 
-  // Calculate charts per page (3 columns, 2 rows = 6 charts per page in landscape)
-  const chartsPerPage = 6;
-  const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
-  const totalPages = reportData ? 2 : 1; // Only Client info page + Table page (if reportData exists)
+  // Only 2 pages: Client info page + Table page
+  const totalPages = 2;
 
   const getCurrentPageCharts = () => {
-    if (currentPage <= 1 || currentPage > 1 + totalChartPages) return [];
-    const pageIndex = currentPage - 2; // Adjust for client info page
-    const startIndex = pageIndex * chartsPerPage;
-    return validCollectionPoints.slice(startIndex, startIndex + chartsPerPage);
+    return []; // No chart pages anymore
   };
 
   // Generate table data from reportData with improved merged columns logic
@@ -667,7 +662,7 @@ export function A4ReportPreview({
           {/* Chart Pages - Using real collection points data */}
 
           {/* Table Page - Optimized for 30 rows without scrolling */}
-          {currentPage === 2 && generateTableData && (
+          {currentPage === 2 && (
             <div className="h-full flex flex-col">
               {/* Minimal Page Header */}
               <div className="border-b border-gray-200 pb-1 mb-2">
@@ -675,69 +670,80 @@ export function A4ReportPreview({
                 <p className="text-gray-600 text-xs">Registro detalhado das medições por ponto de coleta (30 registros)</p>
               </div>
 
-              {/* Optimized Data Table for 30 rows */}
-              <div className="flex-1 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
-                            rowSpan={2}
-                            style={{ width: '60px' }}>
-                          Data
-                        </th>
-                        {generateTableData.collectionPoints.map(point => (
-                          <th key={point.id} 
-                              className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
-                              colSpan={point.measurements.length}>
-                            {point.name}
+              {generateTableData ? (
+                /* Optimized Data Table for 30 rows */
+                <div className="flex-1 overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
+                              rowSpan={2}
+                              style={{ width: '60px' }}>
+                            Data
                           </th>
-                        ))}
-                      </tr>
-                      <tr className="bg-gray-50">
-                        {generateTableData.collectionPoints.map(point => 
-                          point.measurements.map(measurement => (
-                            <th key={`${point.id}-${measurement.parameter}`} 
-                                className="border border-gray-300 px-1 py-1 text-center font-medium text-gray-700"
-                                style={{ width: '40px' }}>
-                              <div className="flex flex-col items-center">
-                                <span className="font-semibold text-xs">{measurement.parameter}</span>
-                                {measurement.unit && (
-                                  <span className="text-gray-500" style={{ fontSize: '6px' }}>({measurement.unit})</span>
-                                )}
-                              </div>
+                          {generateTableData.collectionPoints.map(point => (
+                            <th key={point.id} 
+                                className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
+                                colSpan={point.measurements.length}>
+                              {point.name}
                             </th>
-                          ))
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {generateTableData.rows.map((row, rowIndex) => (
-                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="border border-gray-300 px-1 py-1 font-medium text-gray-900 text-xs">
-                            {row.date}
-                          </td>
+                          ))}
+                        </tr>
+                        <tr className="bg-gray-50">
                           {generateTableData.collectionPoints.map(point => 
-                            point.measurements.map(measurement => {
-                              const pointData = row.pointData.get(point.id) || [];
-                              const value = pointData.find(v => v.parameter === measurement.parameter);
-                              
-                              return (
-                                <td key={`${point.id}-${measurement.parameter}`} 
-                                    className="border border-gray-300 px-1 py-1 text-center">
-                                  <div className="text-xs text-gray-900">
-                                    {value ? parseFloat(value.value).toFixed(2) : '-'}
-                                  </div>
-                                </td>
-                              );
-                            })
+                            point.measurements.map(measurement => (
+                              <th key={`${point.id}-${measurement.parameter}`} 
+                                  className="border border-gray-300 px-1 py-1 text-center font-medium text-gray-700"
+                                  style={{ width: '40px' }}>
+                                <div className="flex flex-col items-center">
+                                  <span className="font-semibold text-xs">{measurement.parameter}</span>
+                                  {measurement.unit && (
+                                    <span className="text-gray-500" style={{ fontSize: '6px' }}>({measurement.unit})</span>
+                                  )}
+                                </div>
+                              </th>
+                            ))
                           )}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {generateTableData.rows.map((row, rowIndex) => (
+                          <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                            <td className="border border-gray-300 px-1 py-1 font-medium text-gray-900 text-xs">
+                              {row.date}
+                            </td>
+                            {generateTableData.collectionPoints.map(point => 
+                              point.measurements.map(measurement => {
+                                const pointData = row.pointData.get(point.id) || [];
+                                const value = pointData.find(v => v.parameter === measurement.parameter);
+                                
+                                return (
+                                  <td key={`${point.id}-${measurement.parameter}`} 
+                                      className="border border-gray-300 px-1 py-1 text-center">
+                                    <div className="text-xs text-gray-900">
+                                      {value ? parseFloat(value.value).toFixed(2) : '-'}
+                                    </div>
+                                  </td>
+                                );
+                              })
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* No data message */
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum Dado de Medição</h3>
+                    <p className="text-gray-600">Não foram encontrados dados de medição para o período selecionado.</p>
+                  </div>
+                </div>
+              )}
 
               {/* Minimal Footer */}
               <div className="mt-1 pt-1 border-t border-gray-200 text-center text-xs text-gray-500">

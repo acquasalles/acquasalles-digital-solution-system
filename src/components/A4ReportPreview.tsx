@@ -248,7 +248,7 @@ export function A4ReportPreview({
   // Calculate charts per page (3 columns, 2 rows = 6 charts per page in landscape)
   const chartsPerPage = 6;
   const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
-  const totalPages = 1 + totalChartPages + (reportData ? 1 : 0); // Client info + Chart pages + Table page (if reportData exists)
+  const totalPages = reportData ? 2 : 1; // Only Client info page + Table page (if reportData exists)
 
   const getCurrentPageCharts = () => {
     if (currentPage <= 1 || currentPage > 1 + totalChartPages) return [];
@@ -665,124 +665,9 @@ export function A4ReportPreview({
           )}
 
           {/* Chart Pages - Using real collection points data */}
-          {currentPage > 1 && currentPage <= 1 + totalChartPages && (
-            <div className="h-full flex flex-col">
-              {/* Page Header - Smaller */}
-              <div className="border-b border-gray-200 pb-2 mb-3">
-                <h2 className="text-lg font-semibold text-gray-900">Gráficos de Monitoramento</h2>
-                <p className="text-gray-600 text-xs">Análise temporal dos parâmetros de qualidade da água</p>
-              </div>
-
-              {/* Charts Grid - 3 columns, 2 rows for landscape with increased height */}
-              <div className="flex-1 grid grid-cols-3 gap-3">
-                {getCurrentPageCharts().map((point, index) => (
-                  <div key={point.id} className="bg-gray-50 p-2 rounded-lg border border-gray-200 flex flex-col">
-                    {/* Smaller title with reduced margin */}
-                    <h3 className="font-medium text-gray-900 mb-0 text-center text-xs">{point.name}</h3>
-                    
-                    {/* Increased chart height with reduced padding */}
-                    <div className="h-52">
-                      <Bar
-                        ref={(ref) => {
-                          if (ref) {
-                            registerChart(point.id, ref);
-                          }
-                        }}
-                        data={point.graphData} 
-                        options={{
-                          ...point.graphOptions,
-                          plugins: {
-                            ...point.graphOptions?.plugins,
-                            annotation: point.outorga?.volumeMax?.value && point.datasetStats.some(stat => stat.label === 'Volume' && !stat.hidden) ? {
-                              annotations: {
-                                volumeMaxLine: {
-                                  type: 'line',
-                                  yMin: point.outorga.volumeMax.value,
-                                  yMax: point.outorga.volumeMax.value,
-                                  borderColor: 'rgb(239, 68, 68)',
-                                  borderWidth: 1,
-                                  borderDash: [3, 3],
-                                  label: {
-                                    display: true,
-                                    content: `Máx: ${point.outorga.volumeMax.value}${point.outorga.volumeMax.unit}`,
-                                    position: 'end',
-                                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                                    color: 'white',
-                                    font: { size: 7 },
-                                    padding: 3
-                                  }
-                                }
-                              }
-                            } : undefined,
-                            legend: {
-                              display: true,
-                              position: 'bottom',
-                              labels: {
-                                font: { size: 7 },
-                                padding: 3,
-                                usePointStyle: true,
-                                boxWidth: 5,
-                                boxHeight: 5
-                              }
-                            }
-                          },
-                          scales: {
-                            ...point.graphOptions?.scales,
-                            x: {
-                              ...point.graphOptions?.scales?.x,
-                              ticks: {
-                                font: { size: 7 },
-                                maxRotation: 45,
-                                maxTicksLimit: 5
-                              }
-                            },
-                            y: {
-                              ...point.graphOptions?.scales?.y,
-                              ticks: {
-                                font: { size: 7 },
-                                maxTicksLimit: 5
-                              }
-                            }
-                          }
-                        }} 
-                      />
-                    </div>
-                    
-                    {/* Smaller stats summary below chart */}
-                    <div className="grid grid-cols-2 gap-1 text-xs mt-1">
-                      {point.datasetStats.filter(stat => !stat.hidden).slice(0, 4).map(stat => (
-                        <div key={stat.label} className="bg-white p-1 rounded text-center">
-                          <div className="font-medium text-xs" style={{ color: stat.color }}>
-                            {stat.label}
-                          </div>
-                          <div className="text-gray-600 text-xs">
-                            {stat.avg}
-                            {stat.total !== undefined && (
-                              <div className="text-xs">T: {stat.total}</div>
-                            )}
-                            {point.totalVolumeConsumed !== undefined && stat.label === 'Volume' && (
-                              <div className="text-xs text-green-600">C: {point.totalVolumeConsumed}m³</div>
-                            )}
-                            {point.outorga?.volumeMax && stat.label === 'Volume' && (
-                              <div className="text-xs text-red-600">Máx: {point.outorga.volumeMax.value}{point.outorga.volumeMax.unit}</div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Footer */}
-              <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
-                <p>Página {currentPage} de {totalPages} | Gráficos de Monitoramento</p>
-              </div>
-            </div>
-          )}
 
           {/* Table Page - Optimized for 30 rows without scrolling */}
-          {currentPage === totalPages && generateTableData && (
+          {currentPage === 2 && generateTableData && (
             <div className="h-full flex flex-col">
               {/* Minimal Page Header */}
               <div className="border-b border-gray-200 pb-1 mb-2">
@@ -856,7 +741,7 @@ export function A4ReportPreview({
 
               {/* Minimal Footer */}
               <div className="mt-1 pt-1 border-t border-gray-200 text-center text-xs text-gray-500">
-                <p>Página {currentPage} de {totalPages} | 30 registros exibidos</p>
+                <p>Página 2 de 2 | 30 registros exibidos</p>
               </div>
             </div>
           )}

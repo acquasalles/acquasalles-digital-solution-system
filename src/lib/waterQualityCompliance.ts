@@ -13,7 +13,7 @@ export const COMPLIANCE_LIMITS: ComplianceLimits = {
   turbidity: { max: 5.0 }
 };
 
-export function analyzeParameterCompliance(
+function analyzeParameterCompliance(
   parameterName: string,
   value: number,
   limits: { min?: number; max?: number }
@@ -53,7 +53,7 @@ export function analyzeParameterCompliance(
   };
 }
 
-export function createWaterQualityParameter(
+function createWaterQualityParameter(
   name: string,
   value: number,
   unit: string,

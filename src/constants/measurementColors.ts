@@ -1,5 +1,5 @@
 // Define measurement type colors using Tailwind CSS color palette
-export const measurementColors: Record<string, string> = {
+const measurementColors: Record<string, string> = {
   'pH': 'rgb(59, 130, 246)',      // Blue-500
   'Cloro': 'rgb(16, 185, 129)',   // Green-500
   'Turbidez': 'rgb(239, 68, 68)', // Red-500
@@ -15,7 +15,7 @@ export const measurementColors: Record<string, string> = {
 };
 
 // Fallback colors for unknown measurement types
-export const fallbackColors = [
+const fallbackColors = [
   'rgb(59, 130, 246)',   // Blue-500
   'rgb(16, 185, 129)',   // Green-500
   'rgb(239, 68, 68)',    // Red-500

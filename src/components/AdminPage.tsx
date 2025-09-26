@@ -46,7 +46,7 @@ export function AdminPage() {
   const [showA4Report, setShowA4Report] = useState(false);
   const [showComplianceAnalysis, setShowComplianceAnalysis] = useState(false);
   const { user, isAdmin } = useAuth();
-  const f = useIntl();
+  const intl = useIntl();
   
   const {
     selectedClient,
@@ -206,9 +206,6 @@ export function AdminPage() {
     } finally {
       setIsLoading(prev => ({ ...prev, report: false }));
     }
-  };
-      setShowA4Report(true);
-    }, 100);
   };
 
   // Handle client selection change

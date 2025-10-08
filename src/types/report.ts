@@ -1,10 +1,10 @@
-interface Medicao {
+export interface Medicao {
   tipo: string;
   valor: number;
   imageUrl?: string;
 }
 
-interface PontoDeColeta {
+export interface PontoDeColeta {
   nome: string;
   medicoes: Medicao[];
 }

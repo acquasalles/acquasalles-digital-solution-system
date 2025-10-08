@@ -3,6 +3,8 @@ import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { IntlShape } from 'react-intl';
 import type { ReportData } from '../types/report';
+import { fetchWaterQualityData, generateComplianceAnalysis } from './waterQualityCompliance';
+import type { ComplianceAnalysis } from '../types/waterQuality';
 
 interface CollectionPointData {
   id: string;
@@ -16,24 +18,13 @@ interface CollectionPointData {
     color: string;
     hidden: boolean;
   }>;
-  outorga?: {
-    volumeMax?: {
-      unit: string;
-      value: number;
-    };
-    horimetroMax?: {
-      unit: string;
-      value: number;
-    };
-  };
-  totalVolumeConsumed?: number;
-  chartImageUrl?: string; // URL to the generated chart image
 }
 
 interface ClientInfo {
   name: string;
   cnpj: string;
   address: string;
+  bairro?: string;
   city: string;
   state: string;
   phone: string;
@@ -43,13 +34,36 @@ interface ClientInfo {
 
 export async function generateA4PDF(
   reportData: ReportData,
-  collectionPointsData: CollectionPointData[],
+  validCollectionPoints: CollectionPointData[],
   clientInfo: ClientInfo,
   reportPeriod: { start: Date; end: Date },
   intl: IntlShape,
-  chartImages?: Map<string, string>
+  chartImages?: Map<string, string>,
+  clientId?: string,
+  startDateStr?: string,
+  endDateStr?: string
 ): Promise<void> {
   try {
+    console.log('Starting A4 PDF generation...');
+    console.log('Chart images available:', chartImages?.size || 0);
+    
+    // Load real analysis data if parameters are provided
+    let realAnalysis: ComplianceAnalysis | null = null;
+    if (clientId && startDateStr && endDateStr) {
+      try {
+        console.log('Loading real analysis data for PDF...');
+        const waterQualityData = await fetchWaterQualityData(clientId, startDateStr, endDateStr);
+        realAnalysis = generateComplianceAnalysis(waterQualityData);
+        console.log('Real analysis loaded for PDF:', {
+          totalSamples: realAnalysis.totalSamples,
+          complianceRate: realAnalysis.complianceRate
+        });
+      } catch (error) {
+        console.error('Error loading real analysis for PDF:', error);
+        // Continue without real analysis
+      }
+    }
+
     // Create PDF in landscape mode (A4)
     const doc = new jsPDF('landscape', 'mm', 'a4');
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -60,39 +74,43 @@ export async function generateA4PDF(
     let currentPage = 1;
     
     // Page 1: Client Information and Summary
-    generateClientInfoPage(doc, clientInfo, reportPeriod, collectionPointsData, reportData, margin, contentWidth, pageHeight, pageWidth);
-    
-    // Chart Pages - 6 charts per page (3x2 grid)
-    const chartsPerPage = 6;
-    const validCollectionPoints = collectionPointsData.filter(
-      point => point.datasetStats && point.datasetStats.length > 0
+    generateClientInfoPage(
+      doc, 
+      clientInfo, 
+      reportPeriod, 
+      validCollectionPoints, 
+      reportData, 
+      margin, 
+      contentWidth, 
+      pageHeight, 
+      pageWidth,
+      realAnalysis
     );
     
-    if (validCollectionPoints.length > 0) {
-      const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
-      
-      for (let pageIndex = 0; pageIndex < totalChartPages; pageIndex++) {
-        doc.addPage();
-        currentPage++;
-        
-        const startIndex = pageIndex * chartsPerPage;
-        const pageCharts = validCollectionPoints.slice(startIndex, startIndex + chartsPerPage);
-        
-        generateChartsPage(doc, pageCharts, currentPage, totalChartPages + 2, margin, contentWidth, pageHeight, pageWidth, chartImages);
-      }
-    }
+    // Skip chart pages - go directly to table page
     
-    // Table Page - Use the same data as the A4 preview
+    // Table Page - Use the same data as the A4 preview  
     if (reportData && reportData.datas.length > 0) {
       doc.addPage();
       currentPage++;
       
-      generateTablePage(doc, reportData, collectionPointsData, currentPage, margin, contentWidth, pageHeight, pageWidth);
+      generateTablePage(
+        doc, 
+        reportData, 
+        validCollectionPoints, 
+        currentPage,
+        2, // Total pages (only 2 pages now)
+        margin, 
+        contentWidth, 
+        pageHeight, 
+        pageWidth
+      );
     }
     
     // Save the PDF
     const fileName = `A4_Report_${clientInfo.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd_HHmm')}.pdf`;
     doc.save(fileName);
+    console.log('A4 PDF generation completed successfully');
   } catch (error) {
     console.error('Error in generateA4PDF:', error);
     throw new Error(`Failed to generate A4 PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -103,66 +121,67 @@ function generateClientInfoPage(
   doc: jsPDF,
   clientInfo: ClientInfo,
   reportPeriod: { start: Date; end: Date },
-  collectionPointsData: CollectionPointData[],
+  validCollectionPoints: CollectionPointData[],
   reportData: ReportData,
   margin: number,
   contentWidth: number,
   pageHeight: number,
-  pageWidth: number
+  pageWidth: number,
+  realAnalysis: ComplianceAnalysis | null
 ) {
   let yPos = margin;
   
-  // Header with blue background - exact match to desired layout
-  doc.setFillColor(59, 130, 246); // Blue-600
-  doc.rect(margin, yPos, contentWidth, 25, 'F');
+  // Header with blue background - exact match to preview
+  doc.setFillColor(59, 130, 246); // Blue-600 bg-blue-600
+  doc.rect(margin, yPos, contentWidth, 35, 'F');
   
-  // Title - positioned to match desired layout
+  // Title - larger and positioned to match preview exactly
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('Relatório de Qualidade da Água', margin + 10, yPos + 12);
+  doc.text('Relatório de Qualidade da Água', margin + 8, yPos + 15);
   
-  // Period - positioned below title
-  doc.setFontSize(11);
+  // Period - positioned below title exactly as in preview
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text(
     `Período: ${format(reportPeriod.start, 'dd/MM/yyyy')} - ${format(reportPeriod.end, 'dd/MM/yyyy')}`,
-    margin + 10,
-    yPos + 20
+    margin + 8,
+    yPos + 25
   );
   
-  // Report number - positioned at top right without "Relatório Nº" prefix
-  doc.setFontSize(16);
+  // Report number - positioned at top right exactly as in preview
+  doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
-  doc.text(`WQR-${format(new Date(), 'yyyyMMdd')}`, pageWidth - margin - 60, yPos + 15);
+  doc.text(`WQR-${format(new Date(), 'yyyyMMdd')}`, pageWidth - margin - 50, yPos + 20);
   
-  yPos += 35;
+  yPos += 45;
   doc.setTextColor(0, 0, 0);
   
-  // Client Information Section - exact positioning
+  // Client Information Section - exact positioning as preview
   doc.setFontSize(18);
   doc.setFont('helvetica', 'bold');
   doc.text('Informações do Cliente', margin, yPos);
   yPos += 15;
   
-  // Client info in 4 columns with exact spacing
+  // Client info in 4 columns with exact spacing as preview
   const colWidth = contentWidth / 4;
   
-  // Column 1: Company Data
-  doc.setFillColor(249, 250, 251); // Gray-50
+  // Column 1: Company Data - exact styling as preview
+  doc.setFillColor(249, 250, 251); // bg-gray-50
   doc.rect(margin, yPos, colWidth - 5, 35, 'F');
-  doc.setDrawColor(229, 231, 235);
+  doc.setDrawColor(229, 231, 235); // border-gray-200
   doc.rect(margin, yPos, colWidth - 5, 35);
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Dados da Empresa', margin + 5, yPos + 8);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Dados da Empresa', margin + 5, yPos + 10);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(`Razão Social: ${clientInfo.name}`, margin + 5, yPos + 16);
-  doc.text(`CNPJ: ${clientInfo.cnpj}`, margin + 5, yPos + 23);
+  doc.setFontSize(10);
+  doc.text(`CNPJ: ${clientInfo.cnpj}`, margin + 5, yPos + 18);
   
-  // Column 2: Address
+  // Column 2: Address - exact styling as preview
   doc.setFillColor(249, 250, 251);
   doc.rect(margin + colWidth, yPos, colWidth - 5, 35, 'F');
   doc.setDrawColor(229, 231, 235);
@@ -170,13 +189,20 @@ function generateClientInfoPage(
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Endereço', margin + colWidth + 5, yPos + 8);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Endereço', margin + colWidth + 5, yPos + 10);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(clientInfo.address, margin + colWidth + 5, yPos + 16);
-  doc.text(`${clientInfo.city} - ${clientInfo.state}`, margin + colWidth + 5, yPos + 23);
+  doc.setFontSize(10);
+  // Split long address into multiple lines
+  const addressLines = doc.splitTextToSize(clientInfo.address, colWidth - 12);
+  let addressY = yPos + 18;
+  addressLines.slice(0, 2).forEach((line: string) => {
+    doc.text(line, margin + colWidth + 5, addressY);
+    addressY += 6;
+  });
+  doc.text(`${clientInfo.city} - ${clientInfo.state}`, margin + colWidth + 5, addressY);
   
-  // Column 3: Contact
+  // Column 3: Contact - exact styling as preview  
   doc.setFillColor(249, 250, 251);
   doc.rect(margin + colWidth * 2, yPos, colWidth - 5, 35, 'F');
   doc.setDrawColor(229, 231, 235);
@@ -184,76 +210,276 @@ function generateClientInfoPage(
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Contato', margin + colWidth * 2 + 5, yPos + 8);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Contato', margin + colWidth * 2 + 5, yPos + 10);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(clientInfo.phone, margin + colWidth * 2 + 5, yPos + 16);
-  doc.text(clientInfo.email, margin + colWidth * 2 + 5, yPos + 23);
-  doc.text(`Responsável: ${clientInfo.contact}`, margin + colWidth * 2 + 5, yPos + 30);
+  doc.setFontSize(10);
+  doc.text(clientInfo.phone, margin + colWidth * 2 + 5, yPos + 18);
+  doc.text(clientInfo.email, margin + colWidth * 2 + 5, yPos + 24);
   
-  // Column 4: Report Period with blue styling
-  doc.setFillColor(239, 246, 255); // Blue-50
+  // Column 4: Report Period with blue styling - exact styling as preview
+  doc.setFillColor(239, 246, 255); // bg-blue-50
   doc.rect(margin + colWidth * 3, yPos, colWidth - 5, 35, 'F');
-  doc.setDrawColor(59, 130, 246);
+  doc.setDrawColor(147, 197, 253); // border-blue-300
   doc.rect(margin + colWidth * 3, yPos, colWidth - 5, 35);
   
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(30, 64, 175); // Blue-800
-  doc.text('Período do Relatório', margin + colWidth * 3 + 5, yPos + 8);
+  doc.setTextColor(30, 64, 175); // text-blue-800
+  doc.text('Período do Relatório', margin + colWidth * 3 + 5, yPos + 10);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text(`Início: ${format(reportPeriod.start, 'dd/MM/yyyy')}`, margin + colWidth * 3 + 5, yPos + 16);
-  doc.text(`Fim: ${format(reportPeriod.end, 'dd/MM/yyyy')}`, margin + colWidth * 3 + 5, yPos + 23);
+  doc.setFontSize(10);
+  doc.text(`Início: ${format(reportPeriod.start, 'dd/MM/yyyy')}`, margin + colWidth * 3 + 5, yPos + 18);
+  doc.text(`Fim: ${format(reportPeriod.end, 'dd/MM/yyyy')}`, margin + colWidth * 3 + 5, yPos + 24);
   doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, margin + colWidth * 3 + 5, yPos + 30);
   
-  yPos += 45;
+  yPos += 50;
   doc.setTextColor(0, 0, 0);
   
-  // Executive Summary with exact blue gradient styling
-  doc.setFillColor(59, 130, 246); // Blue-600
+  // Executive Summary with exact blue gradient styling - matching preview
+  doc.setFillColor(37, 99, 235); // Darker blue for better contrast
   doc.rect(margin, yPos, contentWidth, 40, 'F');
   
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text('Resumo Executivo', margin + 10, yPos + 12);
+  doc.text('Resumo Executivo', margin + 10, yPos + 15);
   
-  // Summary stats in 6 columns with exact positioning
-  const statColWidth = (contentWidth - 40) / 6;
+  // Calculate real statistics from analysis exactly as in preview
+  const realStats = realAnalysis ? (() => {
+    const totalParameters = Object.values(realAnalysis.parameterStats).reduce((sum, stat) => 
+      sum + (stat.totalMeasurements > 0 ? 1 : 0), 0
+    );
+    
+    const criticalAlerts = Object.values(realAnalysis.parameterStats).reduce((sum, stat) => 
+      sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'alto').length, 0
+    );
+    
+    const warnings = Object.values(realAnalysis.parameterStats).reduce((sum, stat) => 
+      sum + stat.nonCompliantValues.filter(nc => nc.riskLevel === 'médio').length, 0
+    );
+
+    const estimatedPoints = Math.max(1, Math.ceil(realAnalysis.totalSamples / 15));
+    const estimatedDays = Math.max(1, Math.ceil(realAnalysis.totalSamples / estimatedPoints));
+
+    return {
+      totalCollectionPoints: estimatedPoints,
+      totalMeasurementDays: estimatedDays,
+      totalParameters,
+      daysAnalyzed: Math.round((reportPeriod.end.getTime() - reportPeriod.start.getTime()) / (1000 * 60 * 60 * 24)),
+      criticalAlerts,
+      warnings,
+      totalSamples: realAnalysis.totalSamples,
+      complianceRate: realAnalysis.complianceRate
+    };
+  })() : {
+    totalCollectionPoints: validCollectionPoints.length,
+    totalMeasurementDays: reportData?.datas.length || 0,
+    totalParameters: validCollectionPoints.reduce((acc, point) => 
+      acc + point.datasetStats.filter(stat => !stat.hidden).length, 0
+    ),
+    daysAnalyzed: Math.round((reportPeriod.end.getTime() - reportPeriod.start.getTime()) / (1000 * 60 * 60 * 24)),
+    criticalAlerts: 0,
+    warnings: 0,
+    complianceRate: 0
+  };
+  
+  // Summary stats in 4 columns - exact positioning as preview
+  const statColWidth = (contentWidth - 60) / 4;
   const stats = [
-    { label: 'Pontos de Coleta', value: collectionPointsData.length.toString() },
-    { label: 'Dias com Medições', value: reportData?.datas.length.toString() || '0' },
-    { label: 'Parâmetros', value: collectionPointsData.reduce((acc, point) => acc + point.datasetStats.filter(stat => !stat.hidden).length, 0).toString() },
-    { label: 'Dias Analisados', value: Math.round((reportPeriod.end.getTime() - reportPeriod.start.getTime()) / (1000 * 60 * 60 * 24)).toString() },
-    { label: 'Alertas Críticos', value: '0' },
-    { label: 'Monitoramento', value: '24h' }
+    { label: 'Pontos de Coleta', value: realStats.totalCollectionPoints.toString() },
+    { label: 'Dias com Medições', value: realStats.totalMeasurementDays.toString() },
+    { label: 'Parâmetros', value: realStats.totalParameters.toString() },
+    { label: 'Taxa Conformidade', value: `${realStats.complianceRate.toFixed(1)}%` }
   ];
   
   stats.forEach((stat, index) => {
-    const x = margin + 20 + (index * statColWidth);
-    doc.setFillColor(255, 255, 255);
-    doc.rect(x, yPos + 18, statColWidth - 5, 18, 'F');
+    const x = margin + 30 + (index * (statColWidth + 10));
+    doc.setFillColor(255, 255, 255); // bg-white
+    doc.rect(x, yPos + 20, statColWidth, 20, 'F');
+    doc.setDrawColor(229, 231, 235);
+    doc.rect(x, yPos + 20, statColWidth, 20);
     
-    // Large number
-    doc.setFontSize(20);
+    // Large number - exact styling as preview
+    doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(59, 130, 246); // Blue-600
-    doc.text(stat.value, x + statColWidth/2, yPos + 26, { align: 'center' });
+    doc.setTextColor(59, 130, 246); // text-blue-600
+    doc.text(stat.value, x + statColWidth/2, yPos + 28, { align: 'center' });
     
-    // Label below
+    // Label below - exact styling as preview
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(75, 85, 99); // Gray-600
-    doc.text(stat.label, x + statColWidth/2, yPos + 32, { align: 'center' });
+    doc.setTextColor(75, 85, 99); // text-gray-600
+    doc.text(stat.label, x + statColWidth/2, yPos + 35, { align: 'center' });
   });
   
-  // Footer with exact positioning
-  yPos = pageHeight - 20;
+  yPos += 55;
+  doc.setTextColor(0, 0, 0);
+  
+  // Non-conformities section - exact match to preview
+  if (realAnalysis) {
+    doc.setFillColor(254, 242, 242); // bg-red-50
+    doc.rect(margin, yPos, contentWidth, 50, 'F');
+    doc.setDrawColor(252, 165, 165); // border-red-200
+    doc.rect(margin, yPos, contentWidth, 50);
+    
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(153, 27, 27); // text-red-900
+    doc.text('Ocorrências de Não Conformidades', margin + 8, yPos + 12);
+    
+    // Collect all non-compliant values exactly as in preview
+    const allNonCompliantValues: Array<{
+      date: string;
+      pointName: string;
+      parameter: string;
+      value: string;
+      riskLevel: string;
+    }> = [];
+    
+    Object.entries(realAnalysis.parameterStats).forEach(([key, stats]) => {
+      const parameterName = key === 'ph' ? 'pH' : key === 'chlorine' ? 'Cloro' : 'Turbidez';
+      const unit = key === 'ph' ? '' : key === 'chlorine' ? 'mg/L' : 'NTU';
+      
+      stats.nonCompliantValues.forEach(nc => {
+        allNonCompliantValues.push({
+          date: format(nc.timestamp, 'dd/MM/yyyy'),
+          pointName: nc.pointName,
+          parameter: parameterName,
+          value: `${nc.value.toFixed(2)}${unit ? ` ${unit}` : ''}`,
+          riskLevel: nc.riskLevel
+        });
+      });
+    });
+    
+    // Sort by date (most recent first) exactly as in preview
+    allNonCompliantValues.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    if (allNonCompliantValues.length === 0) {
+      // Green success message - exact styling as preview
+      doc.setFillColor(240, 253, 244); // bg-green-50
+      doc.rect(margin + 10, yPos + 20, contentWidth - 20, 20, 'F');
+      doc.setDrawColor(34, 197, 94); // border-green-200
+      doc.rect(margin + 10, yPos + 20, contentWidth - 20, 20);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(21, 128, 61); // text-green-800
+      doc.text('✓ Nenhuma não conformidade detectada no período', margin + contentWidth/2, yPos + 32, { align: 'center' });
+    } else {
+      // Non-compliance table - exact styling as preview
+      const tableData = allNonCompliantValues.slice(0, 10).map(nc => [
+        nc.date,
+        nc.pointName,
+        nc.parameter,
+        nc.value,
+        nc.riskLevel.toUpperCase()
+      ]);
+      
+      (doc as any).autoTable({
+        startY: yPos + 20,
+        head: [['Data', 'Ponto de Coleta', 'Parâmetro', 'Valor', 'Nível de Risco']],
+        body: tableData,
+        headStyles: { 
+          fillColor: [254, 202, 202], // bg-red-100
+          textColor: [153, 27, 27], // text-red-800
+          fontStyle: 'bold',
+          fontSize: 9,
+          halign: 'center'
+        },
+        bodyStyles: { 
+          fontSize: 8,
+          halign: 'center',
+          alternateRowStyles: { fillColor: [254, 242, 242] } // bg-red-25
+        },
+        columnStyles: {
+          0: { cellWidth: 30, fontStyle: 'bold' },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 35, fontStyle: 'bold' },
+          3: { cellWidth: 30, textColor: [185, 28, 28] }, // text-red-700
+          4: { cellWidth: 35, textColor: [185, 28, 28], fontStyle: 'bold' }
+        },
+        margin: { left: margin + 10, right: margin + 10 },
+        tableWidth: contentWidth - 20,
+        theme: 'grid',
+        styles: {
+          lineColor: [252, 165, 165], // border-red-100
+          lineWidth: 0.1
+        }
+      });
+      
+      // Show count message if more than 10 - exact styling as preview
+      if (allNonCompliantValues.length > 10) {
+        const tableEndY = (doc as any).lastAutoTable.finalY;
+        doc.setFillColor(254, 202, 202); // bg-red-100
+        doc.rect(margin + 10, tableEndY, contentWidth - 20, 10, 'F');
+        doc.setFontSize(9);
+        doc.setTextColor(185, 28, 28); // text-red-700
+        doc.text(
+          `Mostrando 10 de ${allNonCompliantValues.length} não conformidades`,
+          margin + contentWidth/2,
+          tableEndY + 7,
+          { align: 'center' }
+        );
+        yPos = tableEndY + 20;
+      } else {
+        yPos = (doc as any).lastAutoTable.finalY + 10;
+      }
+    }
+    
+    yPos += 10; // Add extra spacing after non-conformities section
+  }
+  
+  // Real data summary if available - exact styling as preview
+  if (realAnalysis) {
+    doc.setFillColor(240, 253, 244); // bg-green-50
+    doc.rect(margin, yPos, contentWidth, 25, 'F');
+    doc.setDrawColor(34, 197, 94); // border-green-200
+    doc.rect(margin, yPos, contentWidth, 25);
+    
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(21, 128, 61); // text-green-900
+    doc.text('Dados Reais Carregados', margin + 8, yPos + 12);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(22, 101, 52); // text-green-800
+    doc.text(`Total de Amostras: ${realAnalysis.totalSamples}`, margin + 8, yPos + 18);
+    doc.text(`Taxa de Conformidade: ${realAnalysis.complianceRate.toFixed(1)}%`, margin + 100, yPos + 18);
+    doc.text(`Parâmetros Monitorados: ${realStats.totalParameters}`, margin + 200, yPos + 18);
+    
+    yPos += 35;
+  }
+  
+  // Data source indicator - exact styling as preview
+  doc.setFillColor(249, 250, 251); // bg-gray-50
+  doc.rect(margin, yPos, contentWidth, 15, 'F');
+  doc.setDrawColor(229, 231, 235); // border-gray-200
+  doc.rect(margin, yPos, contentWidth, 15);
+  
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  if (realAnalysis) {
+    doc.setTextColor(22, 163, 74); // text-green-600
+    doc.text('✓ Usando dados reais da análise de conformidade', margin + contentWidth/2, yPos + 10, { align: 'center' });
+  } else {
+    doc.setTextColor(234, 88, 12); // text-orange-600
+    doc.text('⚠ Usando dados estimados (carregando dados reais...)', margin + contentWidth/2, yPos + 10, { align: 'center' });
+  }
+  
+  yPos += 25;
+  doc.setTextColor(0, 0, 0);
+  
+  // Footer - exact positioning as preview
+  yPos = pageHeight - 15;
+  doc.setFontSize(10);
+  // Footer - exact positioning from preview
+  yPos = pageHeight - 12;
   doc.setFontSize(9);
-  doc.setTextColor(107, 114, 128);
+  doc.setTextColor(107, 114, 128); // text-gray-500 (#6B7280)
   doc.text('Este relatório foi gerado automaticamente pelo Sistema de Monitoramento ACQUASALLES', margin, yPos);
-  doc.text(`Página 1 de ${Math.ceil(collectionPointsData.length / 6) + 2} | Formato Paisagem (297mm x 210mm)`, margin, yPos + 5);
+  doc.text(`Página 1 de 2 | Formato Paisagem (297mm x 210mm)`, margin, yPos + 5);
 }
 
 function generateChartsPage(
@@ -269,22 +495,23 @@ function generateChartsPage(
 ) {
   let yPos = margin;
   
-  // Page Header with exact styling
-  doc.setFontSize(18);
+  // Page Header - exact styling as preview
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('Gráficos de Monitoramento', margin, yPos + 8);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Gráficos de Monitoramento', margin, yPos + 12);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(107, 114, 128);
-  doc.text('Análise temporal dos parâmetros de qualidade da água', margin, yPos + 16);
+  doc.setTextColor(107, 114, 128); // text-gray-600
+  doc.text('Análise temporal dos parâmetros de qualidade da água', margin, yPos + 22);
   
-  yPos += 25;
+  yPos += 35;
   doc.setTextColor(0, 0, 0);
   
-  // Charts Grid - 3 columns, 2 rows with exact spacing
-  const chartWidth = (contentWidth - 20) / 3;
-  const chartHeight = 85;
-  const chartSpacing = 10;
+  // Charts Grid - 3 columns, 2 rows with exact spacing as preview
+  const chartWidth = (contentWidth - 30) / 3;
+  const chartHeight = 120;
+  const chartSpacing = 15;
   
   pageCharts.forEach((point, index) => {
     const col = index % 3;
@@ -292,102 +519,93 @@ function generateChartsPage(
     const x = margin + (col * (chartWidth + chartSpacing));
     const y = yPos + (row * (chartHeight + chartSpacing));
     
-    // Chart container with exact gray background
-    doc.setFillColor(249, 250, 251); // Gray-50
+    // Chart container - exact styling as preview
+    doc.setFillColor(249, 250, 251); // bg-gray-50
     doc.rect(x, y, chartWidth, chartHeight, 'F');
-    doc.setDrawColor(229, 231, 235); // Gray-200
+    doc.setDrawColor(229, 231, 235); // border-gray-200
     doc.rect(x, y, chartWidth, chartHeight);
     
-    // Chart title - centered and bold
+    // Chart title - centered and bold exactly as preview
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(point.name, x + chartWidth/2, y + 8, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    doc.text(point.name, x + chartWidth/2, y + 10, { align: 'center' });
     
-    // Chart area - white background
+    // Chart area - white background exactly as preview
+    const chartAreaX = x + 5;
+    const chartAreaY = y + 15;
+    const chartAreaWidth = chartWidth - 10;
+    const chartAreaHeight = 70;
+    
     doc.setFillColor(255, 255, 255);
-    doc.rect(x + 5, y + 12, chartWidth - 10, 45, 'F');
+    doc.rect(chartAreaX, chartAreaY, chartAreaWidth, chartAreaHeight, 'F');
     doc.setDrawColor(229, 231, 235);
-    doc.rect(x + 5, y + 12, chartWidth - 10, 45);
+    doc.rect(chartAreaX, chartAreaY, chartAreaWidth, chartAreaHeight);
     
-    // Insert chart image if available
+    // Insert chart image if available - exact positioning as preview
     const chartImage = chartImages?.get(point.id);
-    if (chartImage) {
+    console.log(`Checking chart image for ${point.id}:`, !!chartImage, chartImage?.substring(0, 50));
+    
+    if (chartImage && chartImage.startsWith('data:image/')) {
       try {
-        // Calculate image dimensions to fit within the chart area
-        const imageX = x + 7;
-        const imageY = y + 14;
-        const imageWidth = chartWidth - 14;
-        const imageHeight = 41;
+        console.log(`Adding chart image for point: ${point.name}`);
         
-        doc.addImage(chartImage, 'PNG', imageX, imageY, imageWidth, imageHeight);
-        console.log(`Added chart image for point: ${point.name}`);
+        // Add image with precise positioning to match preview
+        doc.addImage(
+          chartImage, 
+          'PNG', 
+          chartAreaX + 2, 
+          chartAreaY + 2, 
+          chartAreaWidth - 4, 
+          chartAreaHeight - 4
+        );
+        
+        console.log(`Successfully added chart image for ${point.name}`);
       } catch (error) {
         console.error(`Error adding chart image for point ${point.name}:`, error);
-        // Fallback to placeholder text
-        doc.setTextColor(107, 114, 128);
-        doc.setFontSize(10);
-        doc.text('Chart Error', x + chartWidth/2, y + 35, { align: 'center' });
+        doc.setFillColor(252, 165, 165); // bg-red-200
+        doc.rect(chartAreaX + 2, chartAreaY + 2, chartAreaWidth - 4, chartAreaHeight - 4, 'F');
+        doc.setFontSize(8);
+        doc.text('Gráfico Indisponível', x + chartWidth/2, y + 50, { align: 'center' });
       }
     } else {
-      // Chart placeholder text if no image available
-      doc.setTextColor(107, 114, 128); // Gray-500
+      // Chart placeholder text - exact styling as preview
+      doc.setTextColor(107, 114, 128); // text-gray-500
       doc.setFontSize(10);
-      doc.text('Gráfico de Medições', x + chartWidth/2, y + 30, { align: 'center' });
+      doc.text('Gráfico não disponível', x + chartWidth/2, y + 45, { align: 'center' });
       doc.setFontSize(8);
       const measurementTypes = point.datasetStats.filter(stat => !stat.hidden).map(stat => stat.label).join(', ');
-      doc.text(measurementTypes, x + chartWidth/2, y + 38, { align: 'center' });
+      const typeLines = doc.splitTextToSize(measurementTypes, chartAreaWidth - 10);
+      typeLines.slice(0, 2).forEach((line: string, lineIndex: number) => {
+        doc.text(line, x + chartWidth/2, y + 55 + (lineIndex * 6), { align: 'center' });
+      });
     }
     
-    // Stats summary below chart - 2x2 grid
+    // Stats summary below chart - 2x2 grid exactly as preview
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(8);
     const visibleStats = point.datasetStats.filter(stat => !stat.hidden).slice(0, 4);
     visibleStats.forEach((stat, statIndex) => {
       const statX = x + 5 + (statIndex % 2) * (chartWidth/2 - 5);
-      const statY = y + 62 + Math.floor(statIndex / 2) * 10;
+      const statY = y + 95 + Math.floor(statIndex / 2) * 12;
       
-      // Small white box for each stat
+      // Small white box for each stat - exact styling as preview
       doc.setFillColor(255, 255, 255);
-      doc.rect(statX, statY - 3, chartWidth/2 - 10, 8, 'F');
+      doc.rect(statX, statY, chartWidth/2 - 10, 10, 'F');
       doc.setDrawColor(229, 231, 235);
-      doc.rect(statX, statY - 3, chartWidth/2 - 10, 8);
+      doc.rect(statX, statY, chartWidth/2 - 10, 10);
       
-      // Stat label and value
+      // Stat label and value - exact styling as preview
       doc.setFont('helvetica', 'bold');
-      doc.text(stat.label, statX + 2, statY + 1);
+      doc.text(stat.label, statX + 3, statY + 4);
       doc.setFont('helvetica', 'normal');
-      let statText = `${stat.avg}`;
-      if (stat.total !== undefined) {
-        statText += ` (T: ${stat.total})`;
-      }
-      
-      // Add total volume consumed for Volume measurements
-      const pointData = pageCharts.find(p => p.id === point.id);
-      if (pointData?.totalVolumeConsumed !== undefined && stat.label === 'Volume') {
-        statText += ` | C: ${pointData.totalVolumeConsumed}m³`;
-      }
-      
-      doc.text(statText, statX + 2, statY + 4);
-    });
-    
-    // Add outorga information if available
-    const pointData = pageCharts.find(p => p.id === point.id);
-    visibleStats.forEach((stat, statIndex) => {
-      const statX = x + 5 + (statIndex % 2) * (chartWidth/2 - 5);
-      const statY = y + 62 + Math.floor(statIndex / 2) * 10;
-      
-      if (pointData?.outorga?.volumeMax && stat.label === 'Volume') {
-        doc.setTextColor(239, 68, 68); // Red color
-        doc.setFontSize(7);
-        doc.text(`Máx: ${pointData.outorga.volumeMax.value}${pointData.outorga.volumeMax.unit}`, statX + 2, statY + 7);
-        doc.setTextColor(0, 0, 0); // Reset to black
-      }
+      doc.text(`${stat.avg}${stat.total !== undefined ? ` (T: ${stat.total})` : ''}`, statX + 3, statY + 8);
     });
   });
   
-  // Footer
-  yPos = pageHeight - 15;
-  doc.setFontSize(9);
+  // Footer - exact positioning as preview
+  yPos = pageHeight - 10;
+  doc.setFontSize(10);
   doc.setTextColor(107, 114, 128);
   doc.text(`Página ${currentPage} de ${totalPages} | Formato Paisagem`, margin, yPos);
 }
@@ -395,8 +613,9 @@ function generateChartsPage(
 function generateTablePage(
   doc: jsPDF,
   reportData: ReportData,
-  collectionPointsData: CollectionPointData[],
+  validCollectionPoints: CollectionPointData[],
   currentPage: number,
+  totalPages: number,
   margin: number,
   contentWidth: number,
   pageHeight: number,
@@ -404,29 +623,29 @@ function generateTablePage(
 ) {
   let yPos = margin;
   
-  // Page Header
-  doc.setFontSize(16);
+  // Page Header - enhanced styling
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text('Dados de Medição', margin, yPos + 8);
-  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.text('📋 Dados de Medição', margin, yPos + 15);
+  doc.setFontSize(14);
   doc.setFont('helvetica', 'normal');
-  doc.setTextColor(107, 114, 128);
-  doc.text('Registro detalhado das medições por ponto de coleta (30 registros)', margin, yPos + 16);
+  doc.setTextColor(107, 114, 128); // text-gray-600
+  doc.text('Registro detalhado das medições por ponto de coleta (30 registros)', margin, yPos + 28);
   
-  yPos += 25;
+  yPos += 45;
   doc.setTextColor(0, 0, 0);
   
-  // Generate table data using the same logic as A4 preview
+  // Generate enhanced table
   const tableData = generateTableDataFromReport(reportData);
   
   if (tableData && tableData.rows.length > 0) {
-    // Prepare headers with merged structure
+    // Prepare enhanced headers
     const mainHeaders = ['Data'];
     const subHeaders = [''];
     
     // Add collection point headers
     tableData.collectionPoints.forEach(point => {
-      // Add main header for each measurement of this point
       point.measurements.forEach(measurement => {
         mainHeaders.push(point.name);
         subHeaders.push(`${measurement.parameter}${measurement.unit ? ` (${measurement.unit})` : ''}`);
@@ -448,59 +667,50 @@ function generateTablePage(
       return rowData;
     });
     
-    // Generate table using autoTable with exact styling
+    // Generate enhanced table
     (doc as any).autoTable({
       startY: yPos,
       head: [mainHeaders, subHeaders],
       body: tableRows,
       headStyles: [
         { 
-          fillColor: [34, 197, 94], // Green header for main
+          fillColor: [34, 197, 94], // Green-500 for main headers
           textColor: [255, 255, 255], 
-          fontStyle: 'bold', 
-          fontSize: 8,
-          halign: 'center',
-          cellPadding: 2
+          fontStyle: 'bold',
+          fontSize: 11,
+          halign: 'center'
         },
-        { 
-          fillColor: [34, 197, 94], // Green header for sub
-          textColor: [255, 255, 255], 
-          fontStyle: 'normal', 
-          fontSize: 7,
+        {
+          fillColor: [34, 197, 94], // Green-500 for sub headers
+          textColor: [255, 255, 255],
+          fontSize: 10,
           halign: 'center',
-          cellPadding: 1
+          fontStyle: 'normal'
         }
       ],
       bodyStyles: { 
-        fontSize: 7, 
-        cellPadding: 1,
+        fontSize: 9,
         halign: 'center',
-        alternateRowStyles: { fillColor: [249, 250, 251] }
+        cellPadding: 3,
+        alternateRowStyles: { fillColor: [249, 250, 251] } // bg-gray-50
       },
-      columnStyles: {
-        0: { cellWidth: 20, fontStyle: 'bold', halign: 'center' }
-      },
-      theme: 'grid',
-      tableWidth: 'auto',
       margin: { left: margin, right: margin },
       styles: {
         lineColor: [200, 200, 200],
-        lineWidth: 0.1,
+        lineWidth: 0.5,
         overflow: 'linebreak'
       }
     });
-  } else {
-    // No data message
-    doc.setFontSize(12);
-    doc.setTextColor(107, 114, 128);
-    doc.text('Nenhum dado de medição disponível para o período selecionado.', margin, yPos + 20);
+    
+    const tableEndY = (doc as any).lastAutoTable.finalY;
+    yPos = tableEndY + 15;
   }
   
-  // Footer
-  yPos = pageHeight - 15;
-  doc.setFontSize(9);
+  // Footer - exact positioning as preview
+  yPos = pageHeight - 10;
+  doc.setFontSize(10);
   doc.setTextColor(107, 114, 128);
-  doc.text(`Página ${currentPage} | 30 registros exibidos`, margin, yPos);
+  doc.text(`Página ${currentPage} de ${totalPages} | 30 registros exibidos`, margin, yPos);
 }
 
 function generateTableDataFromReport(reportData: ReportData) {
@@ -523,7 +733,7 @@ function generateTableDataFromReport(reportData: ReportData) {
     }>>;
   }>();
 
-  // First pass: collect all collection points and their measurement types
+  // First pass: collect all collection points and their measurement types - exact logic as preview
   reportData.datas.forEach(dateEntry => {
     dateEntry.area.forEach(area => {
       area.pontos_de_coleta.forEach(ponto => {
@@ -561,7 +771,7 @@ function generateTableDataFromReport(reportData: ReportData) {
     });
   });
 
-  // Second pass: organize data by date and point
+  // Second pass: organize data by date and point - exact logic as preview
   reportData.datas.forEach(dateEntry => {
     if (!rowsMap.has(dateEntry.data)) {
       rowsMap.set(dateEntry.data, {
@@ -603,13 +813,15 @@ function generateTableDataFromReport(reportData: ReportData) {
     });
   });
 
+  // Convert to arrays and sort - exact logic as preview
   const collectionPoints = Array.from(collectionPointsMap.values()).map(point => ({
     ...point,
     measurements: point.measurements.sort((a, b) => a.parameter.localeCompare(b.parameter))
   }));
 
   const rows = Array.from(rowsMap.values())
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 30); // Show 30 rows for the table
 
   return {
     headers: ['Data', ...collectionPoints.map(cp => cp.name)],

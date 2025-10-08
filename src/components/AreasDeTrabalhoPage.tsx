@@ -203,55 +203,20 @@ export function AreasDeTrabalhoPage() {
       console.log('Iniciando deleção da área:', { id, nomeArea });
       const supabase = getSupabase();
       
-      // Primeiro, buscar todas as medições desta área para depois deletar seus itens
-      const { data: medicoesData, error: medicoesFetchError } = await supabase
-        .from('medicao')
-        .select('id')
-        .eq('area_de_trabalho_id', id);
-
-      if (medicoesFetchError) {
-        console.error('Erro ao buscar medições:', medicoesFetchError);
-        throw new Error(`Erro ao buscar medições: ${medicoesFetchError.message}`);
+      // Primeiro, verificar se a área existe
+      const { data: areaExists, error: checkError } = await supabase
+        .from('area_de_trabalho')
+        .select('id, nome_area')
+        .eq('id', id)
+        .maybeSingle();
+      
+      console.log('Verificação de existência:', { areaExists, checkError });
+      
+      if (checkError || !areaExists) {
+        throw new Error(`Área não encontrada: ${checkError?.message || 'Item não existe'}`);
       }
       
-      // Segundo, deletar todos os medicao_items que referenciam essas medições
-      if (medicoesData && medicoesData.length > 0) {
-        const medicaoIds = medicoesData.map(m => m.id);
-        
-        const { error: medicaoItemsError } = await supabase
-          .from('medicao_items')
-          .delete()
-          .in('medicao_id', medicaoIds);
-
-        if (medicaoItemsError) {
-          console.error('Erro ao deletar itens de medição:', medicaoItemsError);
-          throw new Error(`Erro ao deletar itens de medição: ${medicaoItemsError.message}`);
-        }
-        
-        // Terceiro, deletar as medições agora que seus itens foram removidos
-        const { error: medicaoError } = await supabase
-          .from('medicao')
-          .delete()
-          .eq('area_de_trabalho_id', id);
-
-        if (medicaoError) {
-          console.error('Erro ao deletar medições:', medicaoError);
-          throw new Error(`Erro ao deletar medições: ${medicaoError.message}`);
-        }
-      }
-
-      // Quarto, deletar todos os pontos de coleta desta área (CASCADE vai cuidar das fotos)
-      const { error: pontosError } = await supabase
-        .from('ponto_de_coleta')
-        .delete()
-        .eq('area_de_trabalho_id', id);
-
-      if (pontosError) {
-        console.error('Erro ao deletar pontos de coleta:', pontosError);
-        throw new Error(`Erro ao deletar pontos de coleta: ${pontosError.message}`);
-      }
-
-      // Finalmente, deletar a área de trabalho
+      // Executar a deleção
       const { error } = await supabase
         .from('area_de_trabalho')
         .delete()
@@ -260,6 +225,19 @@ export function AreasDeTrabalhoPage() {
       console.log('Resultado da deleção:', { error });
       
       if (error) throw error;
+
+      // Verificar se realmente foi deletado
+      const { data: stillExists, error: verifyError } = await supabase
+        .from('area_de_trabalho')
+        .select('id')
+        .eq('id', id)
+        .maybeSingle();
+        
+      console.log('Verificação pós-deleção:', { stillExists, verifyError });
+      
+      if (stillExists && !verifyError) {
+        throw new Error('A área não foi deletada. Possível problema de permissões.');
+      }
 
       // Mostrar mensagem de sucesso
       alert(`✅ Área "${nomeArea}" excluída com sucesso!`);
@@ -514,7 +492,28 @@ export function AreasDeTrabalhoPage() {
           </div>
         </div>
 
-        
+        {/* Stats */}
+        <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Estatísticas</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-blue-900">{areas.length}</div>
+              <div className="text-sm text-blue-700">Áreas do Cliente</div>
+            </div>
+            <div className="bg-green-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-green-900">
+                {clients.length}
+              </div>
+              <div className="text-sm text-green-700">Total de Clientes</div>
+            </div>
+            <div className="bg-purple-50 p-4 rounded-lg">
+              <div className="text-2xl font-bold text-purple-900">
+                {selectedClient ? clients.find(c => c.id === selectedClient)?.razao_social || 'Cliente' : 'Nenhum'}
+              </div>
+              <div className="text-sm text-purple-700">Cliente Selecionado</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Modal de Criação/Edição de Área */}

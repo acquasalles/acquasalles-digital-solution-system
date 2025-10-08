@@ -34,17 +34,6 @@ interface CollectionPointData {
     color: string;
     hidden: boolean;
   }>;
-  outorga?: {
-    volumeMax?: {
-      unit: string;
-      value: number;
-    };
-    horimetroMax?: {
-      unit: string;
-      value: number;
-    };
-  };
-  totalVolumeConsumed?: number;
   isLoading: boolean;
   error: string | null;
 }
@@ -106,13 +95,18 @@ export function A4ReportPreview({
   const captureChartImages = useCallback(async () => {
     const newChartImages = new Map<string, string>();
     
-    // Wait a bit for charts to fully render
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait longer for charts to fully render
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     for (const [pointId, chartInstance] of chartRefs.current.entries()) {
       try {
         if (chartInstance && chartInstance.canvas) {
+          // Force chart update before capture
+          chartInstance.update('none');
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
           const base64Image = chartInstance.toBase64Image('image/png', 1.0);
+          console.log(`Chart image for ${pointId}: ${base64Image.substring(0, 50)}...`);
           newChartImages.set(pointId, base64Image);
           console.log(`Captured chart image for point: ${pointId}`);
         }
@@ -123,6 +117,7 @@ export function A4ReportPreview({
     
     setChartImages(newChartImages);
     console.log(`Total chart images captured: ${newChartImages.size}`);
+    return newChartImages;
   }, []);
 
   // Capture chart images when collection points data changes or current page changes
@@ -215,9 +210,11 @@ export function A4ReportPreview({
 
   const handleDownloadPDF = useCallback(async () => {
     if (onDownloadPDF) {
-      // Capture latest chart images before download
-      await captureChartImages();
-      await onDownloadPDF(chartImages);
+      // Capture latest chart images and pass them directly
+      console.log('Starting PDF download - capturing charts first...');
+      const capturedImages = await captureChartImages();
+      console.log('Charts captured, calling onDownloadPDF with images:', capturedImages.size);
+      await onDownloadPDF(capturedImages);
     } else if (reportData) {
       try {
         await generatePDF(reportData, intl);
@@ -225,7 +222,7 @@ export function A4ReportPreview({
         console.error('Error generating PDF:', error);
       }
     }
-  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
+  }, [onDownloadPDF, reportData, intl, captureChartImages]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -245,24 +242,21 @@ export function A4ReportPreview({
     point => point.graphData && !point.error && !point.isLoading
   );
 
-  // Only 2 pages: Client info page + Table page
-  const totalPages = 2;
+  // Calculate charts per page (3 columns, 2 rows = 6 charts per page in landscape)
+  const chartsPerPage = 6;
+  const totalChartPages = Math.ceil(validCollectionPoints.length / chartsPerPage);
+  const totalPages = 1 + totalChartPages + (reportData ? 1 : 0); // Client info + Chart pages + Table page (if reportData exists)
 
   const getCurrentPageCharts = () => {
-    return []; // No chart pages anymore
+    if (currentPage <= 1 || currentPage > 1 + totalChartPages) return [];
+    const pageIndex = currentPage - 2; // Adjust for client info page
+    const startIndex = pageIndex * chartsPerPage;
+    return validCollectionPoints.slice(startIndex, startIndex + chartsPerPage);
   };
 
   // Generate table data from reportData with improved merged columns logic
   const generateTableData = useMemo(() => {
-    console.log('generateTableData - Starting generation');
-    console.log('reportData available:', !!reportData);
-    
-    if (!reportData || !reportData.datas || reportData.datas.length === 0) {
-      console.log('No reportData available for table generation');
-      return null;
-    }
-
-    console.log('Generating table data from reportData:', reportData);
+    if (!reportData) return null;
 
     const collectionPointsMap = new Map<string, {
       id: string;
@@ -285,11 +279,9 @@ export function A4ReportPreview({
 
     // First pass: collect all collection points and their measurement types
     reportData.datas.forEach(dateEntry => {
-      console.log('Processing date entry:', dateEntry.data, 'with areas:', dateEntry.area.length);
       dateEntry.area.forEach(area => {
         area.pontos_de_coleta.forEach(ponto => {
           const pointId = `${area.nome}-${ponto.nome}`;
-          console.log('Processing point:', pointId, 'with measurements:', ponto.medicoes.length);
           
           // Add collection point if not already added
           if (!collectionPointsMap.has(pointId)) {
@@ -320,7 +312,6 @@ export function A4ReportPreview({
                   parameter: measurementType,
                   unit: unit
                 });
-                console.log('Added measurement type:', measurementType, 'to point:', pointId);
               }
             });
         });
@@ -365,7 +356,6 @@ export function A4ReportPreview({
                 unit: unit,
                 status: 'normal' as const
               });
-              console.log('Added measurement data:', measurementType, m.valor, 'for point:', pointId, 'on date:', dateEntry.data);
             });
         });
       });
@@ -381,16 +371,6 @@ export function A4ReportPreview({
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 30); // Show 30 rows for the table
 
-    console.log('Final table data:', {
-      collectionPointsCount: collectionPoints.length,
-      rowsCount: rows.length,
-      collectionPoints: collectionPoints.map(cp => ({ name: cp.name, measurementCount: cp.measurements.length })),
-      sampleRows: rows.slice(0, 2).map(row => ({ 
-        date: row.date, 
-        pointDataSize: row.pointData.size,
-        pointDataKeys: Array.from(row.pointData.keys())
-      }))
-    });
     return {
       headers: ['Data', ...collectionPoints.map(cp => cp.name)],
       collectionPoints,
@@ -681,10 +661,9 @@ export function A4ReportPreview({
             </div>
           )}
 
-          {/* Chart Pages - Using real collection points data */}
 
-          {/* Table Page - Optimized for 30 rows without scrolling */}
-          {currentPage === 2 && (
+          {/* Table Page - Only show if on page 2 and has data */}
+          {currentPage === 2 && generateTableData && (
             <div className="h-full flex flex-col">
               {/* Minimal Page Header */}
               <div className="border-b border-gray-200 pb-1 mb-2">
@@ -692,97 +671,73 @@ export function A4ReportPreview({
                 <p className="text-gray-600 text-xs">Registro detalhado das medições por ponto de coleta (30 registros)</p>
               </div>
 
-              {(() => {
-                console.log('Rendering table page, generateTableData:', !!generateTableData);
-                console.log('reportData available:', !!reportData);
-                if (reportData) {
-                  console.log('reportData.datas length:', reportData.datas?.length || 0);
-                }
-                return generateTableData;
-              })() ? (
-                /* Optimized Data Table for 30 rows */
-                <div className="flex-1 overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
-                              rowSpan={2}
-                              style={{ width: '60px' }}>
-                            Data
+              {/* Optimized Data Table for 30 rows */}
+              <div className="flex-1 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full border border-gray-300" style={{ fontSize: '7px' }}>
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="border border-gray-300 px-1 py-1 text-left font-semibold text-gray-900" 
+                            rowSpan={2}
+                            style={{ width: '60px' }}>
+                          Data
+                        </th>
+                        {generateTableData.collectionPoints.map(point => (
+                          <th key={point.id} 
+                              className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
+                              colSpan={point.measurements.length}>
+                            <div className="text-xs font-bold">{point.name}</div>
                           </th>
-                          {generateTableData.collectionPoints.map(point => (
-                            <th key={point.id} 
-                                className="border border-gray-300 px-1 py-1 text-center font-semibold text-gray-900"
-                                colSpan={point.measurements.length}>
-                              {point.name}
+                        ))}
+                      </tr>
+                      <tr className="bg-gray-50">
+                        {generateTableData.collectionPoints.map(point => 
+                          point.measurements.map(measurement => (
+                            <th key={`${point.id}-${measurement.parameter}`} 
+                                className="border border-gray-300 px-1 py-1 text-center font-medium text-gray-700"
+                                style={{ width: '40px' }}>
+                              <div className="flex flex-col items-center">
+                                <span className="font-semibold text-xs">{measurement.parameter}</span>
+                                {measurement.unit && (
+                                  <span className="text-gray-500" style={{ fontSize: '6px' }}>({measurement.unit})</span>
+                                )}
+                              </div>
                             </th>
-                          ))}
-                        </tr>
-                        <tr className="bg-gray-50">
+                          ))
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {generateTableData.rows.map((row, rowIndex) => (
+                        <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                          <td className="border border-gray-300 px-1 py-1 font-medium text-gray-900 text-xs">
+                            {row.date}
+                          </td>
                           {generateTableData.collectionPoints.map(point => 
-                            point.measurements.map(measurement => (
-                              <th key={`${point.id}-${measurement.parameter}`} 
-                                  className="border border-gray-300 px-1 py-1 text-center font-medium text-gray-700"
-                                  style={{ width: '40px' }}>
-                                <div className="flex flex-col items-center">
-                                  <span className="font-semibold text-xs">{measurement.parameter}</span>
-                                  {measurement.unit && (
-                                    <span className="text-gray-500" style={{ fontSize: '6px' }}>({measurement.unit})</span>
-                                  )}
-                                </div>
-                              </th>
-                            ))
+                            point.measurements.map(measurement => {
+                              const pointData = row.pointData.get(point.id) || [];
+                              const value = pointData.find(v => v.parameter === measurement.parameter);
+                              
+                              return (
+                                <td key={`${point.id}-${measurement.parameter}`} 
+                                    className="border border-gray-300 px-1 py-1 text-center">
+                                  <div className={`font-medium ${getStatusColor(value?.status)}`} style={{ fontSize: '7px' }}>
+                                    {value ? parseFloat(value.value).toFixed(2) : '-'}
+                                  </div>
+                                </td>
+                              );
+                            })
                           )}
                         </tr>
-                      </thead>
-                      <tbody>
-                        {generateTableData.rows.map((row, rowIndex) => (
-                          <tr key={rowIndex} className={rowIndex % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                            <td className="border border-gray-300 px-1 py-1 font-medium text-gray-900 text-xs">
-                              {row.date}
-                            </td>
-                            {generateTableData.collectionPoints.map(point => 
-                              point.measurements.map(measurement => {
-                                const pointData = row.pointData.get(point.id) || [];
-                                const value = pointData.find(v => v.parameter === measurement.parameter);
-                                
-                                // Ensure we display valid numbers or '-'
-                                let displayValue = '-';
-                                if (value && value.value && !isNaN(parseFloat(value.value))) {
-                                  displayValue = parseFloat(value.value).toFixed(2);
-                                }
-                                
-                                return (
-                                  <td key={`${point.id}-${measurement.parameter}`} 
-                                      className="border border-gray-300 px-1 py-1 text-center">
-                                    <div className="text-xs text-gray-900">
-                                      {displayValue}
-                                    </div>
-                                  </td>
-                                );
-                              })
-                            )}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              ) : (
-                /* No data message */
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum Dado de Medição</h3>
-                    <p className="text-gray-600">Não foram encontrados dados de medição para o período selecionado.</p>
-                  </div>
-                </div>
-              )}
+              </div>
 
               {/* Minimal Footer */}
               <div className="mt-1 pt-1 border-t border-gray-200 text-center text-xs text-gray-500">
-                <p>Página 2 de 2 | 30 registros exibidos</p>
+                <p>Página {currentPage} de {totalPages} | 30 registros exibidos</p>
               </div>
             </div>
           )}

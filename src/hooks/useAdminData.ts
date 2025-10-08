@@ -21,17 +21,6 @@ interface CollectionPointData {
     color: string;
     hidden: boolean;
   }>;
-  outorga?: {
-    volumeMax?: {
-      unit: string;
-      value: number;
-    };
-    horimetroMax?: {
-      unit: string;
-      value: number;
-    };
-  };
-  totalVolumeConsumed?: number;
   isLoading: boolean;
   error: string | null;
 }
@@ -132,8 +121,6 @@ export function useAdminData() {
       graphData: null,
       graphOptions: null,
       datasetStats: [],
-      outorga: undefined,
-      totalVolumeConsumed: undefined,
       isLoading: true,
       error: null
     };
@@ -145,14 +132,6 @@ export function useAdminData() {
         .select(`
           id,
           data_hora_medicao,
-          area_de_trabalho:area_de_trabalho_id (
-            nome_area
-          ),
-          ponto_de_coleta:ponto_de_coleta_id (
-            nome,
-            area_de_trabalho_id,
-            outorga
-          ),
           medicao_items!inner (
             id,
             valor,
@@ -188,20 +167,6 @@ export function useAdminData() {
         };
       }
 
-      // Get area name from the data
-      const areaName = data && data.length > 0 && data[0].area_de_trabalho?.nome_area 
-        ? data[0].area_de_trabalho.nome_area 
-        : '';
-      
-      // Get outorga data from the first measurement's ponto_de_coleta
-      const outorgaData = data && data.length > 0 && data[0].ponto_de_coleta?.outorga 
-        ? data[0].ponto_de_coleta.outorga 
-        : null;
-      
-      console.log('Outorga data for point:', pontoName, outorgaData);
-      
-      // Create chart title with area name
-      const chartTitle = areaName ? `${areaName} - ${pontoName}` : pontoName;
       // Get available measurement types for this point
       const availableTypes = new Set<string>();
       if (data) {
@@ -215,81 +180,24 @@ export function useAdminData() {
         });
       }
 
-      // Create datasets - special handling for Registro (m3) to show daily differences
+      // Create datasets with zero values for missing dates
       const datasets = Array.from(availableTypes).sort().map((type) => {
-        const displayName = type === 'Vazão' ? 'Volume' : 
-                           type === 'Registro (m3)' ? 'Volume' : type;
-        
-        let typeData: number[];
-        
-        if (type === 'Registro (m3)') {
-          // Special handling for Registro (m3) - calculate daily differences
-          console.log('Processing Registro (m3) for daily differences');
+        const displayName = type === 'Vazão' ? 'Volume' : type;
+        const typeData = allDates.map(date => {
+          const measurementsForDate = data?.filter(m => 
+            format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
+          ) || [];
           
-          // First, get the accumulated values for each day
-          const accumulatedValues = allDates.map(date => {
-            const measurementsForDate = data?.filter(m => 
-              format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
-            ) || [];
-            
-            const values = measurementsForDate.flatMap(m => 
-              m.medicao_items
-                .filter(item => item.tipo_medicao?.nome === type)
-                .map(item => parseFloat(item.valor))
-            );
+          const values = measurementsForDate.flatMap(m => 
+            m.medicao_items
+              .filter(item => item.tipo_medicao?.nome === type)
+              .map(item => parseFloat(item.valor))
+          );
 
-            // Return the last (highest) value for the day, or null if no data
-            return values.length > 0 ? Math.max(...values) : null;
-          });
-          
-          console.log('Accumulated values by date:', accumulatedValues);
-          
-          // Fill gaps with previous known values
-          let lastKnownValue: number | null = null;
-          const filledValues = accumulatedValues.map(value => {
-            if (value !== null) {
-              lastKnownValue = value;
-              return value;
-            }
-            return lastKnownValue;
-          });
-          
-          console.log('Filled accumulated values:', filledValues);
-          
-          // Calculate daily differences
-          typeData = filledValues.map((currentValue, index) => {
-            if (index === 0 || currentValue === null) {
-              return 0; // First day or no data
-            }
-            
-            const previousValue = filledValues[index - 1];
-            if (previousValue === null) {
-              return 0;
-            }
-            
-            const difference = currentValue - previousValue;
-            return Number(Math.max(0, difference).toFixed(2)); // Ensure non-negative
-          });
-          
-          console.log('Daily differences calculated:', typeData);
-        } else {
-          // Standard handling for other measurement types (average per day)
-          typeData = allDates.map(date => {
-            const measurementsForDate = data?.filter(m => 
-              format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
-            ) || [];
-            
-            const values = measurementsForDate.flatMap(m => 
-              m.medicao_items
-                .filter(item => item.tipo_medicao?.nome === type)
-                .map(item => parseFloat(item.valor))
-            );
-
-            if (values.length === 0) return 0;
-            const average = values.reduce((a, b) => a + b, 0) / values.length;
-            return Number(average.toFixed(2));
-          });
-        }
+          if (values.length === 0) return 0;
+          const average = values.reduce((a, b) => a + b, 0) / values.length;
+          return Number(average.toFixed(2));
+        });
 
         const validValues = typeData.filter(v => v !== 0);
         const min = validValues.length > 0 ? Math.min(...validValues) : 0;
@@ -297,13 +205,9 @@ export function useAdminData() {
         const avg = validValues.length > 0 
           ? Number((validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2))
           : 0;
-        
-        // Calculate total for volume measurements
-        const total = (type === 'Registro (m3)' || type === 'Vazão')
+        const total = type === 'Vazão' 
           ? Number(validValues.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined;
-        
-        console.log(`Dataset for ${type}:`, { min, max, avg, total, validValues: validValues.length });
 
         const color = getMeasurementColor(type);
 
@@ -319,35 +223,15 @@ export function useAdminData() {
         };
       });
 
-      // Calculate total volume consumed for Volume/Vazão measurements
-      let totalVolumeConsumed: number | undefined;
-      const volumeDataset = datasets.find(d => d.label === 'Volume' || d.label === 'Registro (m3)');
-      console.log('Volume dataset found:', !!volumeDataset);
-      if (volumeDataset && volumeDataset.data.length > 0) {
-        const validVolumeData = volumeDataset.data.filter(v => v !== 0);
-        if (validVolumeData.length > 0) {
-          totalVolumeConsumed = Number(validVolumeData.reduce((a, b) => a + b, 0).toFixed(2));
-          console.log('Total volume consumed (sum of daily differences):', totalVolumeConsumed);
-        }
-      }
-
       // Calculate stats
-      const stats = datasets
-        .filter((dataset, index, arr) => {
-          // Remove duplicates - keep only one Volume dataset
-          if (dataset.label === 'Volume') {
-            return arr.findIndex(d => d.label === 'Volume') === index;
-          }
-          return true;
-        })
-        .map(dataset => ({
+      const stats = datasets.map(dataset => ({
         label: dataset.label,
         min: Math.min(...dataset.data.filter(v => v !== 0)) || 0,
         max: Math.max(...dataset.data) || 0,
         avg: dataset.data.some(v => v !== 0)
           ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
           : 0,
-        total: (dataset.label === 'Volume' || dataset.label === 'Registro (m3)')
+        total: dataset.label === 'Volume'
           ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined,
         color: dataset.borderColor,
@@ -433,7 +317,7 @@ export function useAdminData() {
           },
           title: {
             display: true,
-            text: chartTitle,
+            text: pontoName,
             font: { 
               size: 24, 
               weight: 'bold' as const,
@@ -446,9 +330,6 @@ export function useAdminData() {
             },
             position: 'top' as const,
             align: 'center' as const
-          },
-          annotation: {
-            annotations: {} as any
           }
         },
         scales: {
@@ -462,41 +343,12 @@ export function useAdminData() {
         }
       };
 
-      // Add outorga annotation if volumeMax is available
-      if (outorgaData?.volumeMax?.value && (availableTypes.has('Vazão') || availableTypes.has('Registro (m3)'))) {
-        console.log('Adding outorga annotation:', outorgaData.volumeMax);
-        (chartOptions.plugins.annotation.annotations as any) = {
-          volumeMaxLine: {
-            type: 'line',
-            yMin: outorgaData.volumeMax.value,
-            yMax: outorgaData.volumeMax.value,
-            borderColor: 'rgb(239, 68, 68)', // Red color
-            borderWidth: 2,
-            borderDash: [5, 5],
-            label: {
-              display: true,
-              content: `Volume Máximo Outorgado: ${outorgaData.volumeMax.value} ${outorgaData.volumeMax.unit}`,
-              position: 'end',
-              backgroundColor: 'rgba(239, 68, 68, 0.8)',
-              color: 'white',
-              font: {
-                size: 12,
-                weight: 'bold'
-              },
-              padding: 4
-            }
-          }
-        };
-      }
-
       return {
         id: pontoId,
-        name: chartTitle,
+        name: pontoName,
         graphData: chartData,
         graphOptions: chartOptions,
         datasetStats: stats,
-        outorga: outorgaData,
-        totalVolumeConsumed,
         isLoading: false,
         error: null
       };
@@ -505,8 +357,6 @@ export function useAdminData() {
       console.error('Error generating chart for collection point:', error);
       return {
         ...initialData,
-        outorga: null,
-        totalVolumeConsumed: undefined,
         isLoading: false,
         error: intl.formatMessage({ id: 'admin.report.error.generate' })
       };
@@ -551,14 +401,6 @@ export function useAdminData() {
         .select(`
           id,
           data_hora_medicao,
-          area_de_trabalho:area_de_trabalho_id (
-            nome_area
-          ),
-          ponto_de_coleta:ponto_de_coleta_id (
-            nome,
-            area_de_trabalho_id,
-            outorga
-          ),
           medicao_items!inner (
             id,
             valor,
@@ -594,21 +436,6 @@ export function useAdminData() {
         return;
       }
 
-      // Get area name and point name from the data
-      const areaName = data && data.length > 0 && data[0].area_de_trabalho?.nome_area 
-        ? data[0].area_de_trabalho.nome_area 
-        : '';
-      const pontoName = data && data.length > 0 && data[0].ponto_de_coleta?.nome 
-        ? data[0].ponto_de_coleta.nome 
-        : 'Ponto de Coleta';
-      
-      // Get outorga data from the first measurement's ponto_de_coleta
-      const outorgaData = data && data.length > 0 && data[0].ponto_de_coleta?.outorga 
-        ? data[0].ponto_de_coleta.outorga 
-        : null;
-      
-      // Create chart title with area name
-      const chartTitle = areaName ? `${areaName} - ${pontoName}` : pontoName;
       // Get available measurement types
       const availableTypes = new Set<string>();
       if (data) {
@@ -633,8 +460,7 @@ export function useAdminData() {
 
       // Create datasets with zero values for missing dates
       const datasets = Array.from(availableTypes).sort().map((type) => {
-        const displayName = type === 'Vazão' ? 'Volume' : 
-                           type === 'Registro (m3)' ? 'Volume' : type;
+        const displayName = type === 'Vazão' ? 'Volume' : type;
         const typeData = allDates.map(date => {
           const measurementsForDate = data?.filter(m => 
             format(new Date(m.data_hora_medicao), 'dd/MM/yyyy') === date
@@ -657,7 +483,7 @@ export function useAdminData() {
         const avg = validValues.length > 0 
           ? Number((validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(2))
           : 0;
-        const total = type === 'Vazão' || type === 'Registro (m3)'
+        const total = type === 'Vazão' 
           ? Number(validValues.reduce((a, b) => a + b, 0).toFixed(2))
           : undefined;
 
@@ -674,19 +500,6 @@ export function useAdminData() {
           minBarLength: 5,
         };
       });
-
-      // Calculate total volume consumed for Volume/Vazão measurements
-      let totalVolumeConsumed: number | undefined;
-      const volumeDataset = datasets.find(d => d.label === 'Volume');
-      console.log('Main function - Volume dataset found:', !!volumeDataset);
-      if (volumeDataset && volumeDataset.data.length > 0) {
-        // For daily differences, total consumption is the sum of all daily differences
-        const validVolumeData = volumeDataset.data.filter(v => v !== 0);
-        if (validVolumeData.length > 0) {
-          totalVolumeConsumed = Number(validVolumeData.reduce((a, b) => a + b, 0).toFixed(2));
-          console.log('Main function - Total volume consumed (sum of daily differences):', totalVolumeConsumed);
-        }
-      }
 
       // Update stats to include total for Volume
       setDatasetStats(datasets.map(dataset => ({
@@ -752,7 +565,7 @@ export function useAdminData() {
         };
       }
 
-      const baseGraphOptions = {
+      setGraphOptions({
         responsive: true,
         maintainAspectRatio: false,
         interaction: {
@@ -803,22 +616,7 @@ export function useAdminData() {
               );
             }
           },
-          title: { 
-            display: true,
-            text: chartTitle,
-            font: { 
-              size: 20, 
-              weight: 'bold' as const 
-            },
-            color: '#1f2937',
-            padding: {
-              top: 10,
-              bottom: 20
-            }
-          },
-          annotation: {
-            annotations: {} as any
-          }
+          title: { display: false }
         },
         scales: {
           x: {
@@ -828,38 +626,7 @@ export function useAdminData() {
           },
           y: yAxisConfig
         }
-      };
-
-      // Add outorga annotation if volumeMax is available
-      if (outorgaData?.volumeMax?.value && availableTypes.has('Registro (m3)')) {
-        console.log('Main function - Adding outorga annotation:', outorgaData.volumeMax);
-        (baseGraphOptions.plugins.annotation.annotations as any) = {
-          volumeMaxLine: {
-            type: 'line',
-            yMin: outorgaData.volumeMax.value,
-            yMax: outorgaData.volumeMax.value,
-            borderColor: 'rgb(239, 68, 68)', // Red color
-            borderWidth: 2,
-            borderDash: [5, 5],
-            label: {
-              display: true,
-              content: `Volume Máximo Outorgado: ${outorgaData.volumeMax.value} ${outorgaData.volumeMax.unit}`,
-              position: 'end',
-              backgroundColor: 'rgba(239, 68, 68, 0.8)',
-              color: 'white',
-              font: {
-                size: 12,
-                weight: 'bold'
-              },
-              padding: 4
-            }
-          }
-        };
-      }
-
-      setGraphOptions(baseGraphOptions);
-      
-      console.log('Final graph options with annotations:', baseGraphOptions.plugins?.annotation);
+      });
     } catch (error) {
       console.error('Error generating graph:', error);
       setError(intl.formatMessage({ id: 'admin.report.error.generate' }));
@@ -933,6 +700,7 @@ export function useAdminData() {
 
       const formattedData = {
         ...formatData(measurementsResult.data, clientResult.data.razao_social),
+        cnpj_cpf: clientResult.data.cnpj_cpf,
         endereco: clientResult.data.endereco,
         bairro: clientResult.data.bairro,
         cidade: clientResult.data.cidade
@@ -941,11 +709,7 @@ export function useAdminData() {
       setReportData(formattedData);
     } catch (error) {
       setError(intl.formatMessage({ id: 'admin.report.error.generate' }));
-      // Set empty report data instead of null to avoid type issues
-      setReportData({
-        cliente: clients.find(c => c.id === selectedClient)?.razao_social || 'Cliente',
-        datas: []
-      });
+      setReportData(null);
     } finally {
       setIsLoading(prev => ({ ...prev, report: false }));
     }

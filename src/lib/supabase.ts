@@ -54,4 +54,4 @@ export const resetSupabaseClient = () => {
   supabaseInstance = null;
 };
 
-const supabase = getSupabase();
+export const supabase = getSupabase();

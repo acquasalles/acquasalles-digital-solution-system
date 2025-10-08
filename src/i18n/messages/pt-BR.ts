@@ -2,10 +2,6 @@ export default {
   // Navigation
   'nav.reports': 'Relatórios',
   'nav.clientUsers': 'Usuários do Cliente',
-  'nav.measurements': 'Medições',
-  'nav.measurements.list': 'Lista',
-  'nav.measurements': 'Medições',
-  'nav.measurements.list': 'Lista',
   'nav.logout': 'Sair',
 
   // Auth

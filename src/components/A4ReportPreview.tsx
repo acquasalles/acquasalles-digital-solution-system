@@ -2,7 +2,8 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { Download, Printer, Calendar, MapPin, Phone, Mail, Building, FileText, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { Bar, getElementAtEvent, getDatasetAtEvent } from 'react-chartjs-2';
-import { generatePDF } from '../lib/generatePDF';
+import { generatePDFWithLambda } from '../lib/generatePDFWithLambda';
+import { extractFirstPageHTML } from '../lib/extractFirstPageHTML';
 import { useIntl } from 'react-intl';
 import type { ReportData } from '../types/report';
 import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
@@ -218,14 +219,16 @@ export function A4ReportPreview({
       // Capture latest chart images before download
       await captureChartImages();
       await onDownloadPDF(chartImages);
-    } else if (reportData) {
+    } else if (reportData && currentPage === 1) {
       try {
-        await generatePDF(reportData, intl);
+        const htmlContent = extractFirstPageHTML(reportRef.current);
+        await generatePDFWithLambda(htmlContent, clientInfo.name);
       } catch (error) {
-        console.error('Error generating PDF:', error);
+        console.error('Error generating PDF with Lambda:', error);
+        alert(error instanceof Error ? error.message : 'Erro ao gerar PDF');
       }
     }
-  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages]);
+  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages, currentPage, clientInfo.name]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {
@@ -447,7 +450,7 @@ export function A4ReportPreview({
         >
           {/* Page 1: Client Information */}
           {currentPage === 1 && (
-            <div className="h-full flex flex-col">
+            <div className="h-full flex flex-col" data-page="1">
               {/* Header */}
               <div className="border-b-2 border-blue-600 pb-3 mb-4">
                 <div className="flex items-center justify-between">

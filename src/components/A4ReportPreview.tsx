@@ -89,6 +89,7 @@ export function A4ReportPreview({
   const [currentPage, setCurrentPage] = useState(1);
   const [realAnalysis, setRealAnalysis] = useState<ComplianceAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [isGeneratingPDFState, setIsGeneratingPDFState] = useState(false);
   const [chartImages, setChartImages] = useState<Map<string, string>>(new Map());
   const chartRefs = useRef<Map<string, Chart>>(new Map());
   const reportRef = useRef<HTMLDivElement>(null);
@@ -225,12 +226,15 @@ export function A4ReportPreview({
       return;
     }
 
+    setIsGeneratingPDFState(true);
     try {
       const htmlContent = extractFirstPageHTML(reportRef.current);
       await generatePDFWithLambda(htmlContent, clientInfo.name);
     } catch (error) {
       console.error('Error generating PDF with Lambda:', error);
       alert(error instanceof Error ? error.message : 'Erro ao gerar PDF');
+    } finally {
+      setIsGeneratingPDFState(false);
     }
   }, [currentPage, clientInfo.name]);
 
@@ -421,10 +425,10 @@ export function A4ReportPreview({
               
               <button
                 onClick={handleDownloadPDF}
-                disabled={isGeneratingPDF}
+                disabled={isGeneratingPDFState}
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 transition-colors duration-200"
               >
-                {isGeneratingPDF ? (
+                {isGeneratingPDFState ? (
                   <>
                     <Loader2 className="animate-spin h-4 w-4 mr-2" />
                     Gerando PDF...

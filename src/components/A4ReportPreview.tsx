@@ -215,20 +215,24 @@ export function A4ReportPreview({
   }, [realAnalysis, collectionPointsData, reportData, reportPeriod]);
 
   const handleDownloadPDF = useCallback(async () => {
-    if (onDownloadPDF) {
-      // Capture latest chart images before download
-      await captureChartImages();
-      await onDownloadPDF(chartImages);
-    } else if (reportData && currentPage === 1) {
-      try {
-        const htmlContent = extractFirstPageHTML(reportRef.current);
-        await generatePDFWithLambda(htmlContent, clientInfo.name);
-      } catch (error) {
-        console.error('Error generating PDF with Lambda:', error);
-        alert(error instanceof Error ? error.message : 'Erro ao gerar PDF');
-      }
+    if (currentPage !== 1) {
+      alert('Por favor, navegue para a primeira página para gerar o PDF.');
+      return;
     }
-  }, [onDownloadPDF, reportData, intl, captureChartImages, chartImages, currentPage, clientInfo.name]);
+
+    if (!reportRef.current) {
+      alert('Não foi possível capturar o conteúdo do relatório.');
+      return;
+    }
+
+    try {
+      const htmlContent = extractFirstPageHTML(reportRef.current);
+      await generatePDFWithLambda(htmlContent, clientInfo.name);
+    } catch (error) {
+      console.error('Error generating PDF with Lambda:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao gerar PDF');
+    }
+  }, [currentPage, clientInfo.name]);
 
   const getStatusColor = (status?: string) => {
     switch (status) {

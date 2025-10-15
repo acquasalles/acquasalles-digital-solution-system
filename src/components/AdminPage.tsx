@@ -355,33 +355,39 @@ export function AdminPage() {
                 {/* 3-Column Grid Layout */}
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {validCollectionPoints.map((pointData) => (
-                      <div 
-                        key={pointData.id} 
-                        className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-                      >
-                        {/* Compact Header */}
-                        <div className="bg-white border-b border-gray-200 px-4 py-1">
-                          {pointData.areaName ? (
-                            <div className="text-center">
-                              <div className="text-sm font-medium text-gray-600">
-                                {pointData.areaName}
+                    {collectionPointsData.map((pointData) => {
+                      const hasData = pointData.graphData && !pointData.error && !pointData.isLoading;
+
+                      return (
+                        <div
+                          key={pointData.id}
+                          className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                        >
+                          {/* Compact Header */}
+                          <div className="bg-white border-b border-gray-200 px-4 py-1">
+                            {pointData.areaName ? (
+                              <div className="text-center">
+                                <div className="text-sm font-medium text-gray-600">
+                                  {pointData.areaName}
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                  {pointData.name}
+                                </h3>
                               </div>
-                              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            ) : (
+                          <div className="text-center">
+                              <h3 className="text-lg font-bold text-gray-900">
                                 {pointData.name}
                               </h3>
-                            </div>
-                          ) : (
-                        <div className="text-center">
-                            <h3 className="text-lg font-bold text-gray-900">
-                              {pointData.name}
-                            </h3>
-                        </div>
-                          )}
-                        </div>
+                          </div>
+                            )}
+                          </div>
 
-                        {/* Compact Stats Grid */}
-                        <div className="p-4">
+                          {/* Render content only if there is data */}
+                          {hasData ? (
+                            <>
+                              {/* Compact Stats Grid */}
+                              <div className="p-4">
                           <div className="space-y-3 mb-4">
                             {pointData.datasetStats.filter(stat => !stat.hidden).map((stat) => {
                               // Special handling for Volume measurements
@@ -569,11 +575,14 @@ export function AdminPage() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                            </>
+                          ) : null}
+                        </div>
+                      );
+                    })}
                   </div>
 
-                 
+
                 </div>
               </div>
             ) : selectedClient && !isLoading.graph ? (

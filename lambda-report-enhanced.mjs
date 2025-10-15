@@ -40,6 +40,9 @@ exports.handler = async (event) => {
     console.log('Setting HTML content...');
     await page.setContent(html, { waitUntil: "networkidle0" });
 
+    console.log('Waiting for rendering...');
+    await page.waitForTimeout(500);
+
     console.log('Generating PDF...');
 
     // Gera PDF em buffer com configurações otimizadas para multi-página
@@ -48,6 +51,7 @@ exports.handler = async (event) => {
       landscape: true,
       printBackground: true,
       preferCSSPageSize: true,  // Respeita as regras @page do CSS
+      displayHeaderFooter: false,
       margin: {
         top: 0,
         right: 0,

@@ -344,7 +344,7 @@ export function AdminPage() {
                 {/* Report Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
                   <h1 className="text-2xl font-bold text-center mb-2">
-                    Collection Points Visual Report
+                    Gráficos de Medição por Área e ponto de coleta
                   </h1>
                   <p className="text-blue-100 text-center">
                     {clients.find(c => c.id === selectedClient)?.razao_social} | 
@@ -355,69 +355,73 @@ export function AdminPage() {
                 {/* 3-Column Grid Layout */}
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                    {validCollectionPoints.map((pointData) => (
-                      <div 
-                        key={pointData.id} 
-                        className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
-                      >
-                        {/* Compact Header */}
-                        <div className="bg-white border-b border-gray-200 p-4">
-                          {pointData.areaName ? (
-                            <div className="text-center">
-                              <div className="text-sm font-medium text-gray-600 mb-1">
-                                {pointData.areaName}
+                    {collectionPointsData.map((pointData) => {
+                      const hasData = pointData.graphData.datasets.length>0 && !pointData.error && !pointData.isLoading;
+
+                      if (!hasData) return null;
+
+                      return (
+                        <div
+                          key={pointData.id}
+                          className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                        >
+                          {/* Compact Header */}
+                          <div className="bg-white border-b border-gray-200 px-4 py-1">
+                            {pointData.areaName ? (
+                              <div className="text-center">
+                                <div className="text-sm font-medium text-gray-600">
+                                  {pointData.areaName}
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                  {pointData.name}
+                                </h3>
                               </div>
-                              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            ) : (
+                          <div className="text-center">
+                              <h3 className="text-lg font-bold text-gray-900">
                                 {pointData.name}
                               </h3>
-                            </div>
-                          ) : (
-                            <h3 className="text-lg font-semibold text-gray-900 text-center mb-1">
-                              {pointData.name}
-                            </h3>
-                          )}
-                          <div className="w-12 h-0.5 bg-blue-500 mx-auto"></div>
-                        </div>
+                          </div>
+                            )}
+                          </div>
 
-                        {/* Compact Stats Grid */}
-                        <div className="p-4">
+                          {/* Compact Stats Grid */}
+                          <div className="p-4">
                           <div className="space-y-3 mb-4">
-                            {pointData.datasetStats.filter(stat => !stat.hidden).map((stat) => {
-                              // Special handling for Volume measurements
-                              if (stat.label === 'Volume') {
-                                return (
-                                  <div
-                                    key={`${pointData.id}-${stat.label}`}
-                                    className="bg-white rounded-md border p-3"
-                                    style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
-                                  >
-                                    <div className="text-sm font-semibold text-gray-900 mb-2">
-                                      {stat.label}
-                                    </div>
-                                    <div className="space-y-1 text-xs">
-                                      <div className="text-gray-700">
-                                        <span className="font-medium">Média Diária:</span> {stat.avg} m³
-                                      </div>
-                                      <div className="text-gray-700">
-                                        <span className="font-medium">Min / Máx Diário:</span> {stat.min} - {stat.max} m³
-                                      </div>
-                                      {pointData.totalVolumeConsumed !== undefined && (
-                                        <div className="text-green-700">
-                                          <span className="font-medium">Total Consumido período:</span> {pointData.totalVolumeConsumed} m³
-                                        </div>
-                                      )}
-                                      {pointData.outorga?.volumeMax && (
-                                        <div className="text-red-700">
-                                          <span className="font-medium">Máx Outorga:</span> {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
-                                        </div>
-                                      )}
-                                    </div>
+                            {/* Volume measurements - full width */}
+                            {pointData.datasetStats.filter(stat => !stat.hidden && stat.label === 'Volume').map((stat) => (
+                              <div
+                                key={`${pointData.id}-${stat.label}`}
+                                className="bg-white rounded-md border p-3"
+                                style={{ borderLeftColor: stat.color, borderLeftWidth: '3px' }}
+                              >
+                                <div className="text-sm font-semibold text-gray-900 mb-2">
+                                  {stat.label}
+                                </div>
+                                <div className="space-y-1 text-xs">
+                                  <div className="text-gray-700">
+                                    <span className="font-medium">Média Diária:</span> {stat.avg} m³
                                   </div>
-                                );
-                              }
-                              
-                              // Standard handling for other measurement types
-                              return (
+                                  <div className="text-gray-700">
+                                    <span className="font-medium">Min / Máx Diário:</span> {stat.min} - {stat.max} m³
+                                  </div>
+                                  {pointData.totalVolumeConsumed !== undefined && (
+                                    <div className="text-green-700">
+                                      <span className="font-medium">Total Consumido período:</span> {pointData.totalVolumeConsumed} m³
+                                    </div>
+                                  )}
+                                  {pointData.outorga?.volumeMax && (
+                                    <div className="text-red-700">
+                                      <span className="font-medium">Máx Outorga:</span> {pointData.outorga.volumeMax.value} {pointData.outorga.volumeMax.unit}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Other measurements - 3 column grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                              {pointData.datasetStats.filter(stat => !stat.hidden && stat.label !== 'Volume').map((stat) => (
                                 <div
                                   key={`${pointData.id}-${stat.label}`}
                                   className="bg-white rounded-md border p-2 text-center"
@@ -433,8 +437,8 @@ export function AdminPage() {
                                     {stat.min} - {stat.max}
                                   </div>
                                 </div>
-                              );
-                            })}
+                              ))}
+                            </div>
                           </div>
 
                           {/* Compact Chart */}
@@ -568,11 +572,12 @@ export function AdminPage() {
                             </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
 
-                 
+
                 </div>
               </div>
             ) : selectedClient && !isLoading.graph ? (

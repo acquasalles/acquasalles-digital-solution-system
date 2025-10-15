@@ -364,7 +364,7 @@ export function AdminPage() {
                         <div className="bg-white border-b border-gray-200 px-4 py-1">
                           {pointData.areaName ? (
                             <div className="text-center">
-                              <div className="text-sm font-medium text-gray-600 mb-1">
+                              <div className="text-sm font-medium text-gray-600">
                                 {pointData.areaName}
                               </div>
                               <h3 className="text-lg font-bold text-gray-900 mb-1">
@@ -373,7 +373,7 @@ export function AdminPage() {
                             </div>
                           ) : (
                         <div className="text-center">
-                            <h3 className="text-lg font-bold text-gray-900 mb-1">
+                            <h3 className="text-lg font-bold text-gray-900">
                               {pointData.name}
                             </h3>
                         </div>

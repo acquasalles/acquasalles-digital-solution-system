@@ -372,9 +372,11 @@ export function AdminPage() {
                               </h3>
                             </div>
                           ) : (
+                        <div className="text-center">
                             <h3 className="text-lg font-bold text-gray-900 mb-1">
                               {pointData.name}
                             </h3>
+                        </div>
                           )}
                         </div>
 

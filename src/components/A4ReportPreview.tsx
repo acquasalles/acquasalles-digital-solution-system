@@ -825,6 +825,21 @@ export function A4ReportPreview({
                       {/* Visual Bar Chart */}
                       <div className="mb-2 bg-white p-3 rounded border border-gray-200">
                         <div className="relative h-32 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-2 border border-gray-200">
+                          {/* Limit line positioned inside the chart */}
+                          {point.outorgaLimit && maxValue > 0 && (
+                            <div
+                              className="absolute left-2 right-2 border-t-2 border-dashed border-red-600 z-10 pointer-events-none"
+                              style={{
+                                bottom: `${(point.outorgaLimit / maxValue * 112) + 8}px`
+                              }}
+                            >
+                              <span className="absolute -right-2 -top-2.5 text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap shadow-sm">
+                                {point.outorgaLimit.toFixed(1)} m³
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Bars */}
                           {point.dailyConsumption.filter(d => d.value > 0).slice(0, 30).map((day, idx) => {
                             // Calculate height in pixels for better control
                             const heightPx = maxValue > 0 ? (day.value / maxValue * 112) : 0; // 112px = h-28 (container height - padding)
@@ -851,14 +866,6 @@ export function A4ReportPreview({
                             );
                           })}
                         </div>
-                        {point.outorgaLimit && (
-                          <div className="mt-2 flex items-center">
-                            <div className="flex-1 border-t-2 border-dashed border-red-500" style={{ height: '2px' }} />
-                            <span className="text-xs text-red-700 font-semibold ml-2 bg-red-50 px-2 py-0.5 rounded whitespace-nowrap">
-                              Limite: {point.outorgaLimit.toFixed(1)} m³
-                            </span>
-                          </div>
-                        )}
                       </div>
 
                       {/* Statistics */}

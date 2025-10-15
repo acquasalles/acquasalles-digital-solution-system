@@ -361,7 +361,7 @@ export function AdminPage() {
                         className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200"
                       >
                         {/* Compact Header */}
-                        <div className="bg-white border-b border-gray-200 p-4">
+                        <div className="bg-white border-b border-gray-200 px-4">
                           {pointData.areaName ? (
                             <div className="text-center">
                               <div className="text-sm font-medium text-gray-600 mb-1">

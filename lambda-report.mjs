@@ -1,176 +1,78 @@
-// Enhanced Lambda handler with proper error handling and debugging - ES6 Module
-import { generateA4PDF } from './generateA4PDF.js';
-import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
-import handlebars from "handlebars";
-import AWS from "aws-sdk";
-import fs from "fs";
-import path from "path";
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium");
+const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 
-export const handler = async (event, context) => {
-  console.log('Lambda invocation started');
-  console.log('Event:', JSON.stringify(event, null, 2));
-  console.log('Context:', JSON.stringify(context, null, 2));
-  
+const s3 = new S3Client({
+  region: 'us-west-2', 
+  forcePathStyle: false,
+  useChecksum: false,
+  useArnRegion: false
+
+});
+const BUCKET = "water-report-chart-images"; // seu bucket
+const PREFIX = "relatorios"; // pasta no bucket
+
+exports.handler = async (event) => {
   try {
-    // Handle different event sources (API Gateway, direct invocation, etc.)
-    let payload;
-    
-    if (event.body) {
-      // API Gateway event
-      console.log('Processing API Gateway event');
-      console.log('Raw body:', event.body);
-      console.log('Body type:', typeof event.body);
-      
-      if (typeof event.body === 'string') {
-        try {
-          payload = JSON.parse(event.body);
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError);
-          return {
-            statusCode: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*'
-            },
-            body: JSON.stringify({ 
-              error: 'Invalid JSON in request body',
-              details: parseError.message 
-            })
-          };
-        }
-      } else {
-        payload = event.body;
-      }
-    } else if (event.reportData || event.collectionPointsData) {
-      // Direct invocation with payload in event
-      console.log('Processing direct invocation');
-      payload = event;
-    } else {
-      // No valid payload found
-      console.error('No valid payload found in event');
+    const { html } = JSON.parse(event.body || "{}");
+
+    if (!html) {
       return {
         statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({ 
-          error: 'No valid payload found',
-          receivedEvent: event 
-        })
+        body: JSON.stringify({ error: "Campo 'html' é obrigatório" }),
       };
     }
-    
-    console.log('Parsed payload:', JSON.stringify(payload, null, 2));
-    
-    // Validate required fields
-    const { reportData, collectionPointsData, clientInfo, reportPeriod, options = {} } = payload;
-    
-    if (!reportData) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({ error: 'Missing reportData in payload' })
-      };
-    }
-    
-    if (!collectionPointsData) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({ error: 'Missing collectionPointsData in payload' })
-      };
-    }
-    
-    if (!clientInfo) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({ error: 'Missing clientInfo in payload' })
-      };
-    }
-    
-    if (!reportPeriod) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*'
-        },
-        body: JSON.stringify({ error: 'Missing reportPeriod in payload' })
-      };
-    }
-    
-    // Convert date strings to Date objects
-    const period = {
-      start: new Date(reportPeriod.start),
-      end: new Date(reportPeriod.end)
-    };
-    
-    console.log('Validation passed, generating PDF...');
-    
-    // Create a mock intl object for testing
-    const mockIntl = {
-      formatMessage: ({ id }) => {
-        const messages = {
-          'admin.report.title': 'Relatório de Qualidade da Água',
-          'admin.report.client': 'Cliente',
-          'admin.report.area': 'Área',
-          'admin.report.point': 'Ponto',
-          'admin.report.measurements': 'Medições',
-          'admin.report.photo': 'Foto'
-        };
-        return messages[id] || id;
-      }
-    };
-    
-    // Generate PDF
-    const pdfBuffer = await generateA4PDF(
-      reportData,
-      collectionPointsData,
-      clientInfo,
-      period,
-      mockIntl
-    );
-    
-    console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
-    
+
+    // Lança o Chromium
+    const executablePath = await chromium.executablePath;
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: "networkidle0" });
+
+    // Gera PDF em buffer
+    const pdfBuffer = await page.pdf({
+      format: "A4",
+      landscape: true,
+      printBackground: true,
+    });
+
+    await browser.close();
+
+    // Nome único para o arquivo
+    const key = `${PREFIX}/relatorio-${Date.now()}.pdf`;
+
+    // // Salva no S3
+    // await s3.send(
+    //   new PutObjectCommand({
+    //     Bucket: BUCKET,
+    //     Key: key,
+    //     Body: pdfBuffer,
+    //     ContentType: "application/pdf",
+    //   })
+    // );
+
     return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="water-quality-report.pdf"',
-        'Access-Control-Allow-Origin': '*'
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "attachment; filename=relatorio.pdf",
       },
-      body: pdfBuffer.toString('base64'),
-      isBase64Encoded: true
+      body: pdfBuffer.toString("base64"),
+      isBase64Encoded: true,
     };
-    
+
   } catch (error) {
-    console.error('Lambda execution error:', error);
-    console.error('Error stack:', error.stack);
-    
+    console.error("Erro ao gerar PDF:", error);
     return {
       statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*'
-      },
-      body: JSON.stringify({ 
-        error: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      })
+      body: JSON.stringify({ error: error.message }),
     };
   }
 };

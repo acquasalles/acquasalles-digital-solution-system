@@ -344,7 +344,7 @@ export function AdminPage() {
                 {/* Report Header */}
                 <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
                   <h1 className="text-2xl font-bold text-center mb-2">
-                    Collection Points Visual Report
+                    Gráficos de Medição por Área e ponto de coleta
                   </h1>
                   <p className="text-blue-100 text-center">
                     {clients.find(c => c.id === selectedClient)?.razao_social} | 

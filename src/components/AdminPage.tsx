@@ -362,9 +362,20 @@ export function AdminPage() {
                       >
                         {/* Compact Header */}
                         <div className="bg-white border-b border-gray-200 p-4">
-                          <h3 className="text-lg font-semibold text-gray-900 text-center mb-1">
-                            {pointData.name}
-                          </h3>
+                          {pointData.areaName ? (
+                            <div className="text-center">
+                              <div className="text-sm font-medium text-gray-600 mb-1">
+                                {pointData.areaName}
+                              </div>
+                              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                                {pointData.name}
+                              </h3>
+                            </div>
+                          ) : (
+                            <h3 className="text-lg font-semibold text-gray-900 text-center mb-1">
+                              {pointData.name}
+                            </h3>
+                          )}
                           <div className="w-12 h-0.5 bg-blue-500 mx-auto"></div>
                         </div>
 

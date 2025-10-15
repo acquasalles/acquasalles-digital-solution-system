@@ -356,6 +356,7 @@ export function AdminPage() {
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {collectionPointsData.map((pointData) => {
+                console.log('PointsData', pointData)
                       const hasData = pointData.graphData && !pointData.error && !pointData.isLoading;
 
                       return (

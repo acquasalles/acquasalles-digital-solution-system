@@ -2,7 +2,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { Download, Calendar, FileText, Loader2, CheckCircle, AlertTriangle, TrendingUp, BarChart3 } from 'lucide-react';
 import { format, eachDayOfInterval } from 'date-fns';
 import { generatePDFWithLambda } from '../lib/generatePDFWithLambda';
-import { extractFirstPageHTML } from '../lib/extractFirstPageHTML';
+import { extractFirstPageHTML, extractAllPagesHTML } from '../lib/extractFirstPageHTML';
 import { useIntl } from 'react-intl';
 import type { ReportData } from '../types/report';
 import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
@@ -243,23 +243,34 @@ export function A4ReportPreview({
   }, [realAnalysis, collectionPointsData, reportData, reportPeriod]);
 
   const handleDownloadPDF = async () => {
-    if (currentPage !== 1) {
-      alert('Por favor, navegue para a primeira página para gerar o PDF.');
-      return;
-    }
-
     if (!reportRef.current) {
       alert('Não foi possível capturar o conteúdo do relatório.');
       return;
     }
 
     setIsGeneratingPDFState(true);
+    const originalPage = currentPage;
+
     try {
-      const htmlContent = extractFirstPageHTML(reportRef.current);
+      console.log(`Generating PDF with ${totalPages} pages...`);
+
+      const setPageAsync = async (page: number): Promise<void> => {
+        return new Promise((resolve) => {
+          setCurrentPage(page);
+          setTimeout(() => resolve(), 50);
+        });
+      };
+
+      const htmlContent = await extractAllPagesHTML(reportRef.current, totalPages, setPageAsync);
+
+      console.log('All pages extracted, sending to Lambda...');
       await generatePDFWithLambda(htmlContent, clientInfo.name);
+
+      setCurrentPage(originalPage);
     } catch (error) {
       console.error('Error generating PDF with Lambda:', error);
       alert(error instanceof Error ? error.message : 'Erro ao gerar PDF');
+      setCurrentPage(originalPage);
     } finally {
       setIsGeneratingPDFState(false);
     }

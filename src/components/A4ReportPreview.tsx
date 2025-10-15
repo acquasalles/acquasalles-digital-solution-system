@@ -824,30 +824,35 @@ export function A4ReportPreview({
 
                       {/* Visual Bar Chart */}
                       <div className="mb-2 bg-white p-2 rounded border border-gray-200">
-                        <div className="flex items-end justify-between h-24 gap-0.5">
+                        <div className="relative h-24 flex items-end gap-0.5 bg-gray-50 rounded px-1">
                           {point.dailyConsumption.filter(d => d.value > 0).slice(0, 30).map((day, idx) => {
                             const heightPercent = maxValue > 0 ? (day.value / maxValue * 100) : 0;
+                            const minHeight = heightPercent > 0 ? Math.max(heightPercent, 5) : 0;
                             const isOver = day.isNonConformant;
 
                             return (
                               <div
                                 key={idx}
-                                className="flex-1 relative group"
-                                title={`${day.dateStr}: ${day.value.toFixed(2)} m³`}
+                                className="flex-1 relative group min-w-[2px]"
+                                style={{ minHeight: '4px' }}
                               >
                                 <div
-                                  className={`w-full rounded-t transition-all ${
-                                    isOver ? 'bg-red-500' : 'bg-blue-500'
+                                  className={`w-full rounded-t-sm ${
+                                    isOver ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'
                                   }`}
-                                  style={{ height: `${heightPercent}%` }}
+                                  style={{
+                                    height: `${minHeight}%`,
+                                    minHeight: heightPercent > 0 ? '4px' : '0px'
+                                  }}
+                                  title={`${day.dateStr}: ${day.value.toFixed(2)} m³`}
                                 />
                               </div>
                             );
                           })}
                         </div>
                         {point.outorgaLimit && (
-                          <div className="mt-1 flex items-center justify-center">
-                            <div className="h-0.5 w-full bg-red-500 border-t-2 border-dashed border-red-600" />
+                          <div className="mt-1 flex items-center">
+                            <div className="flex-1 h-px bg-red-500 border-t-2 border-dashed border-red-600" />
                             <span className="text-xs text-red-600 font-medium ml-2 whitespace-nowrap">
                               Limite: {point.outorgaLimit.toFixed(1)} m³
                             </span>

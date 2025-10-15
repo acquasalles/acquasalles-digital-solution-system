@@ -376,7 +376,6 @@ export function AdminPage() {
                               {pointData.name}
                             </h3>
                           )}
-                          <div className="w-12 h-0.5 bg-blue-500 mx-auto"></div>
                         </div>
 
                         {/* Compact Stats Grid */}

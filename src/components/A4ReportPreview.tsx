@@ -24,6 +24,7 @@ interface ClientInfo {
 interface CollectionPointData {
   id: string;
   name: string;
+  areaName?: string;
   graphData: any;
   graphOptions: any;
   datasetStats: Array<{

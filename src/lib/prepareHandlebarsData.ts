@@ -4,6 +4,7 @@ import type { ReportData } from '../types/report';
 interface CollectionPointData {
   id: string;
   name: string;
+  areaName?: string;
   datasetStats: Array<{
     label: string;
     min: number;

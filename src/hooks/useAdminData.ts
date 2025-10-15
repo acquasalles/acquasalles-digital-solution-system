@@ -10,6 +10,7 @@ import { getMeasurementColor } from '../constants/measurementColors';
 interface CollectionPointData {
   id: string;
   name: string;
+  areaName?: string;
   graphData: any;
   graphOptions: any;
   datasetStats: Array<{
@@ -129,6 +130,7 @@ export function useAdminData() {
     const initialData: CollectionPointData = {
       id: pontoId,
       name: pontoName,
+      areaName: undefined,
       graphData: null,
       graphOptions: null,
       datasetStats: [],
@@ -189,9 +191,9 @@ export function useAdminData() {
       }
 
       // Get area name from the data
-      const areaName = data && data.length > 0 && data[0].area_de_trabalho?.nome_area 
-        ? data[0].area_de_trabalho.nome_area 
-        : '';
+      const areaName = data && data.length > 0 && data[0].area_de_trabalho?.nome_area
+        ? data[0].area_de_trabalho.nome_area
+        : undefined;
       
       // Get outorga data from the first measurement's ponto_de_coleta
       const outorgaData = data && data.length > 0 && data[0].ponto_de_coleta?.outorga 
@@ -491,7 +493,8 @@ export function useAdminData() {
 
       return {
         id: pontoId,
-        name: chartTitle,
+        name: pontoName,
+        areaName: areaName,
         graphData: chartData,
         graphOptions: chartOptions,
         datasetStats: stats,

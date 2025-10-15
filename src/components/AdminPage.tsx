@@ -356,8 +356,9 @@ export function AdminPage() {
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {collectionPointsData.map((pointData) => {
-                console.log('PointsData', pointData)
-                      const hasData = pointData.graphData.datasets.length >0 && !pointData.error && !pointData.isLoading;
+                      const hasData = pointData.graphData && !pointData.error && !pointData.isLoading;
+
+                      if (!hasData) return null;
 
                       return (
                         <div
@@ -384,11 +385,8 @@ export function AdminPage() {
                             )}
                           </div>
 
-                          {/* Render content only if there is data */}
-                          {hasData ? (
-                            <>
-                              {/* Compact Stats Grid */}
-                              <div className="p-4">
+                          {/* Compact Stats Grid */}
+                          <div className="p-4">
                           <div className="space-y-3 mb-4">
                             {pointData.datasetStats.filter(stat => !stat.hidden).map((stat) => {
                               // Special handling for Volume measurements
@@ -576,8 +574,6 @@ export function AdminPage() {
                             </div>
                           )}
                         </div>
-                            </>
-                          ) : null}
                         </div>
                       );
                     })}

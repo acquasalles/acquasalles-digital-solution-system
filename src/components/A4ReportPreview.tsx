@@ -783,9 +783,9 @@ export function A4ReportPreview({
 
           {/* Volume Consumption Report Pages */}
           {currentPage > 1 && currentPage <= 1 + totalVolumePages && volumeData && (
-            <div className="h-full flex flex-col" data-page={currentPage}>
+            <div className="h-full flex flex-col " data-page={currentPage}>
               {/* Page Header */}
-              <div className="border-b-2 border-blue-600 pb-3 mb-4">
+              <div className="border-b-2 border-blue-600 pb-1 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 mb-0 flex items-center">

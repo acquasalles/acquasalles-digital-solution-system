@@ -904,8 +904,8 @@ export function A4ReportPreview({
                       {/* Outorga Info */}
                       {point.outorgaLimit ? (
                         <div className="bg-blue-50 p-1.5 rounded border border-blue-200 text-xs">
-                          <div className="font-medium text-blue-900">Outorga Definida</div>
-                          <div className="text-blue-700 text-[10px]">Limite diário: {point.outorgaLimit.toFixed(2)} {point.outorgaUnit}</div>
+                          <div className="font-medium text-blue-900">Outorga Definida
+                          <span className="text-blue-700 text-[10px]">Limite diário: {point.outorgaLimit.toFixed(2)} {point.outorgaUnit}</span></div>
                         </div>
                       ) : (
                         <div className="bg-gray-100 p-1.5 rounded border border-gray-300 text-xs text-gray-600">

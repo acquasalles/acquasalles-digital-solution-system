@@ -762,16 +762,6 @@ export function A4ReportPreview({
                 </div>
               )}
 
-              {/* Show data source indicator */}
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                <div className="text-xs text-gray-600 text-center">
-                  {realAnalysis ? (
-                    <span className="text-green-600 font-medium">✓ Usando dados reais da análise de conformidade</span>
-                  ) : (
-                    <span className="text-orange-600 font-medium">⚠ Usando dados estimados (carregando dados reais...)</span>
-                  )}
-                </div>
-              </div>
 
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">

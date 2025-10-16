@@ -636,7 +636,7 @@ export function A4ReportPreview({
                     
                     if (allNonCompliantValues.length === 0) {
                       return (
-                        <div className="bg-green-50 p-2 rounded border border-green-200 text-green-800 text-center text-xs">
+                        <div className="bg-gray-50 p-2 rounded border border-green-200 text-green-800 text-center text-xs">
                           <CheckCircle className="h-4 w-4 inline mr-1" />
                           Nenhuma não conformidade detectada no período
                         </div>

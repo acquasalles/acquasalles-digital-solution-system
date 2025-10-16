@@ -753,7 +753,6 @@ export function A4ReportPreview({
               {/* Real data summary */}
               {realAnalysis && (
                 <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-4">
-                  <h4 className="font-semibold text-green-900 mb-2 text-sm">Dados Reais Carregados</h4>
                   <div className="grid grid-cols-3 gap-2 text-xs text-green-800">
                     <div>Total de Amostras: <strong>{realAnalysis.totalSamples}</strong></div>
                     <div>Taxa de Conformidade: <strong>{realAnalysis.complianceRate.toFixed(1)}%</strong></div>

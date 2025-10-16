@@ -809,17 +809,9 @@ export function A4ReportPreview({
                   const maxValue = Math.max(...point.dailyConsumption.map(d => d.value), point.outorgaLimit || 0);
 
                   return (
-                    <div key={point.id} className="bg-gray-50 p-2 rounded-lg border-2 border-gray-200 flex flex-col">
-                      {/* Point Header */}
-                      <div className="mb-1">
-                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{point.name}</h3>
-                        {point.areaName && (
-                          <p className="text-xs text-gray-600 leading-tight">{point.areaName}</p>
-                        )}
-                      </div>
-
-                      {/* Status Badge */}
-                      <div className="mb-1">
+                    <div key={point.id} className="bg-gray-50 p-2 rounded-lg border-2 border-gray-200 flex flex-col relative">
+                      {/* Status Badge - Top Right */}
+                      <div className="absolute top-2 right-2">
                         {point.isConformant ? (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                             <CheckCircle className="h-3 w-3 mr-1" />
@@ -830,6 +822,14 @@ export function A4ReportPreview({
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             Não Conforme ({point.nonConformantDays.length} dias)
                           </span>
+                        )}
+                      </div>
+
+                      {/* Point Header */}
+                      <div className="mb-1 pr-20">
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{point.name}</h3>
+                        {point.areaName && (
+                          <p className="text-xs text-gray-600 leading-tight">{point.areaName}</p>
                         )}
                       </div>
 

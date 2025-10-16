@@ -255,7 +255,7 @@ export function AdminPage() {
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="text-xl font-bold mb-4">Measurement Analysis</h2>
           
           <div className="space-y-3">

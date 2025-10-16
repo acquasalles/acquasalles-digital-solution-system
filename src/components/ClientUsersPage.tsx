@@ -348,7 +348,7 @@ export function ClientUsersPage() {
                 </option>
                 {clients.map((client) => (
                   <option key={client.id} value={client.id}>
-                    {client.razao_social}
+                    {client.id} - {client.razao_social}
                   </option>
                 ))}
               </select>

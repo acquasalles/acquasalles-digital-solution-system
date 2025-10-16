@@ -804,29 +804,29 @@ export function A4ReportPreview({
               </div>
 
               {/* Volume Points Grid - 2 columns */}
-              <div className="flex-1 grid grid-cols-2 gap-4">
+              <div className="flex-1 grid grid-cols-2 gap-3">
                 {getCurrentVolumePoints().map((point) => {
                   const maxValue = Math.max(...point.dailyConsumption.map(d => d.value), point.outorgaLimit || 0);
 
                   return (
-                    <div key={point.id} className="bg-gray-50 p-3 rounded-lg border-2 border-gray-200 flex flex-col">
+                    <div key={point.id} className="bg-gray-50 p-2 rounded-lg border-2 border-gray-200 flex flex-col">
                       {/* Point Header */}
-                      <div className="mb-2">
-                        <h3 className="font-bold text-gray-900 text-sm">{point.name}</h3>
+                      <div className="mb-1">
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{point.name}</h3>
                         {point.areaName && (
-                          <p className="text-xs text-gray-600">{point.areaName}</p>
+                          <p className="text-xs text-gray-600 leading-tight">{point.areaName}</p>
                         )}
                       </div>
 
                       {/* Status Badge */}
-                      <div className="mb-2">
+                      <div className="mb-1">
                         {point.isConformant ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Conforme
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
                             <AlertTriangle className="h-3 w-3 mr-1" />
                             Não Conforme ({point.nonConformantDays.length} dias)
                           </span>
@@ -834,14 +834,14 @@ export function A4ReportPreview({
                       </div>
 
                       {/* Visual Bar Chart */}
-                      <div className="mb-2 bg-white p-3 rounded border border-gray-200">
-                        <div className="relative h-32 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-2 border border-gray-200">
+                      <div className="mb-1 bg-white p-2 rounded border border-gray-200">
+                        <div className="relative h-24 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-2 border border-gray-200">
                           {/* Limit line positioned inside the chart */}
                           {point.outorgaLimit && maxValue > 0 && (
                             <div
                               className="absolute left-2 right-2 border-t-2 border-dashed border-red-600 z-10 pointer-events-none"
                               style={{
-                                bottom: `${(point.outorgaLimit / maxValue * 112) + 8}px`
+                                bottom: `${(point.outorgaLimit / maxValue * 80) + 8}px`
                               }}
                             >
                               <span className="absolute -right-2 -top-2.5 text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap shadow-sm">
@@ -853,8 +853,8 @@ export function A4ReportPreview({
                           {/* Bars */}
                           {point.dailyConsumption.filter(d => d.value > 0).slice(0, 30).map((day, idx) => {
                             // Calculate height in pixels for better control
-                            const heightPx = maxValue > 0 ? (day.value / maxValue * 112) : 0; // 112px = h-28 (container height - padding)
-                            const finalHeight = heightPx > 0 ? Math.max(heightPx, 8) : 0; // Minimum 8px when value exists
+                            const heightPx = maxValue > 0 ? (day.value / maxValue * 80) : 0; // 80px = h-24 (container height - padding)
+                            const finalHeight = heightPx > 0 ? Math.max(heightPx, 6) : 0; // Minimum 6px when value exists
                             const isOver = day.isNonConformant;
 
                             return (
@@ -869,7 +869,7 @@ export function A4ReportPreview({
                                   } transition-all cursor-pointer`}
                                   style={{
                                     height: `${finalHeight}px`,
-                                    minHeight: finalHeight > 0 ? '8px' : '0px'
+                                    minHeight: finalHeight > 0 ? '6px' : '0px'
                                   }}
                                   title={`${day.dateStr}: ${day.value.toFixed(2)} m³${isOver ? ` (EXCEDEU ${day.exceedancePercent.toFixed(1)}%)` : ''}`}
                                 />
@@ -880,21 +880,21 @@ export function A4ReportPreview({
                       </div>
 
                       {/* Statistics */}
-                      <div className="grid grid-cols-2 gap-2 text-xs mb-2">
-                        <div className="bg-white p-2 rounded border border-gray-200">
-                          <div className="text-gray-600">Total Período</div>
+                      <div className="grid grid-cols-2 gap-1.5 text-xs mb-1.5">
+                        <div className="bg-white p-1.5 rounded border border-gray-200">
+                          <div className="text-gray-600 text-[10px]">Total Período</div>
                           <div className="font-bold text-blue-700">{point.totalVolume.toFixed(2)} m³</div>
                         </div>
-                        <div className="bg-white p-2 rounded border border-gray-200">
-                          <div className="text-gray-600">Média Diária</div>
+                        <div className="bg-white p-1.5 rounded border border-gray-200">
+                          <div className="text-gray-600 text-[10px]">Média Diária</div>
                           <div className="font-bold text-green-700">{point.averageDaily.toFixed(2)} m³</div>
                         </div>
-                        <div className="bg-white p-2 rounded border border-gray-200">
-                          <div className="text-gray-600">Máximo Dia</div>
+                        <div className="bg-white p-1.5 rounded border border-gray-200">
+                          <div className="text-gray-600 text-[10px]">Máximo Dia</div>
                           <div className="font-bold text-orange-700">{point.maxDaily.toFixed(2)} m³</div>
                         </div>
-                        <div className="bg-white p-2 rounded border border-gray-200">
-                          <div className="text-gray-600">Taxa Conformidade</div>
+                        <div className="bg-white p-1.5 rounded border border-gray-200">
+                          <div className="text-gray-600 text-[10px]">Taxa Conformidade</div>
                           <div className={`font-bold ${point.conformanceRate >= 95 ? 'text-green-700' : point.conformanceRate >= 80 ? 'text-yellow-700' : 'text-red-700'}`}>
                             {point.conformanceRate.toFixed(1)}%
                           </div>
@@ -903,32 +903,13 @@ export function A4ReportPreview({
 
                       {/* Outorga Info */}
                       {point.outorgaLimit ? (
-                        <div className="bg-blue-50 p-2 rounded border border-blue-200 text-xs">
+                        <div className="bg-blue-50 p-1.5 rounded border border-blue-200 text-xs">
                           <div className="font-medium text-blue-900">Outorga Definida</div>
-                          <div className="text-blue-700">Limite diário: {point.outorgaLimit.toFixed(2)} {point.outorgaUnit}</div>
+                          <div className="text-blue-700 text-[10px]">Limite diário: {point.outorgaLimit.toFixed(2)} {point.outorgaUnit}</div>
                         </div>
                       ) : (
-                        <div className="bg-gray-100 p-2 rounded border border-gray-300 text-xs text-gray-600">
+                        <div className="bg-gray-100 p-1.5 rounded border border-gray-300 text-xs text-gray-600">
                           Sem outorga definida
-                        </div>
-                      )}
-
-                      {/* Non-conformant Days List */}
-                      {point.nonConformantDays.length > 0 && (
-                        <div className="mt-2 bg-red-50 p-2 rounded border border-red-200">
-                          <div className="text-xs font-medium text-red-900 mb-1">Dias Não Conformes:</div>
-                          <div className="text-xs text-red-700 max-h-12 overflow-y-auto">
-                            {point.nonConformantDays.slice(0, 5).map((day, idx) => (
-                              <div key={idx}>
-                                {day.dateStr}: {day.value.toFixed(2)} m³ (+{day.exceedancePercent.toFixed(1)}%)
-                              </div>
-                            ))}
-                            {point.nonConformantDays.length > 5 && (
-                              <div className="font-medium">
-                                ... e mais {point.nonConformantDays.length - 5} dia(s)
-                              </div>
-                            )}
-                          </div>
                         </div>
                       )}
                     </div>

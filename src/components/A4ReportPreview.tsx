@@ -788,7 +788,7 @@ export function A4ReportPreview({
               <div className="border-b-2 border-blue-600 pb-3 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-1 flex items-center">
+                    <h2 className="text-xl font-bold text-gray-900 mb-0 flex items-center">
                       <BarChart3 className="h-5 w-5 mr-2" />
                       Relatório de Consumo de Volume
                     </h2>

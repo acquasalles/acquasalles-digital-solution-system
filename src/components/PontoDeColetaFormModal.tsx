@@ -2,16 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { getSupabase } from '../lib/supabase';
 import { Loader2, X } from 'lucide-react';
 
+interface OutorgaConfig {
+  volumeMax?: {
+    value: number;
+    unit: string;
+  };
+  horimetroMax?: {
+    value: number;
+    unit: string;
+  };
+}
+
 interface PontoDeColeta {
   id: string;
   nome: string;
   descricao?: string;
   localizacao?: any;
   tipos_medicao?: string[];
-  outorga_volume_max_value?: number;
-  outorga_volume_max_unit?: string;
-  outorga_horimetro_max_value?: number;
-  outorga_horimetro_max_unit?: string;
+  outorga?: OutorgaConfig;
 }
 
 interface TipoMedicao {
@@ -61,11 +69,18 @@ export function PontoDeColetaFormModal({
        const tiposMedicao = Array.isArray(pontoData.tipos_medicao) ? pontoData.tipos_medicao : [];
        console.log('Carregando tipos de medição para edição:', tiposMedicao);
        setSelectedTiposMedicao(tiposMedicao);
-       // Carregar dados de outorga
-       setOutorgaVolumeValue(pontoData.outorga_volume_max_value?.toString() || '');
-       setOutorgaVolumeUnit(pontoData.outorga_volume_max_unit || 'm³');
-       setOutorgaHorimetroValue(pontoData.outorga_horimetro_max_value?.toString() || '');
-       setOutorgaHorimetroUnit(pontoData.outorga_horimetro_max_unit || 'horas');
+       // Carregar dados de outorga do JSON
+       if (pontoData.outorga) {
+         setOutorgaVolumeValue(pontoData.outorga.volumeMax?.value?.toString() || '');
+         setOutorgaVolumeUnit(pontoData.outorga.volumeMax?.unit || 'm³');
+         setOutorgaHorimetroValue(pontoData.outorga.horimetroMax?.value?.toString() || '');
+         setOutorgaHorimetroUnit(pontoData.outorga.horimetroMax?.unit || 'horas');
+       } else {
+         setOutorgaVolumeValue('');
+         setOutorgaVolumeUnit('m³');
+         setOutorgaHorimetroValue('');
+         setOutorgaHorimetroUnit('horas');
+       }
       } else {
         // Modo de criação
         setNome('');
@@ -125,16 +140,35 @@ export function PontoDeColetaFormModal({
     try {
       const supabase = getSupabase();
       console.log('Salvando ponto com tipos de medição:', selectedTiposMedicao);
+
+      // Construir objeto outorga no formato JSON
+      const outorgaConfig: any = {};
+
+      if (outorgaVolumeValue) {
+        outorgaConfig.volumeMax = {
+          value: parseFloat(outorgaVolumeValue),
+          unit: outorgaVolumeUnit
+        };
+      } else {
+        outorgaConfig.volumeMax = {};
+      }
+
+      if (outorgaHorimetroValue) {
+        outorgaConfig.horimetroMax = {
+          value: parseFloat(outorgaHorimetroValue),
+          unit: outorgaHorimetroUnit
+        };
+      } else {
+        outorgaConfig.horimetroMax = {};
+      }
+
       let dataToSave: any = {
         nome: nome.trim(),
         descricao: descricao.trim() || null,
         tipos_medicao: selectedTiposMedicao,
         area_de_trabalho_id: areaId,
         cliente_id: parseInt(clienteId),
-        outorga_volume_max_value: outorgaVolumeValue ? parseFloat(outorgaVolumeValue) : null,
-        outorga_volume_max_unit: outorgaVolumeValue ? outorgaVolumeUnit : null,
-        outorga_horimetro_max_value: outorgaHorimetroValue ? parseFloat(outorgaHorimetroValue) : null,
-        outorga_horimetro_max_unit: outorgaHorimetroValue ? outorgaHorimetroUnit : null,
+        outorga: outorgaConfig,
       };
 
       if (localizacao.trim()) {

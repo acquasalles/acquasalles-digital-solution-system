@@ -7,7 +7,6 @@ import { useIntl } from 'react-intl';
 import type { ReportData } from '../types/report';
 import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
 import type { ComplianceAnalysis } from '../types/waterQuality';
-import { getSupabase } from '../lib/supabase';
 
 interface ClientInfo {
   name: string;
@@ -90,7 +89,6 @@ export function A4ReportPreview({
   const [realAnalysis, setRealAnalysis] = useState<ComplianceAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [isGeneratingPDFState, setIsGeneratingPDFState] = useState(false);
-  const [waterQualityLimits, setWaterQualityLimits] = useState<Record<string, {min?: number; max?: number}>>({});
   const reportRef = useRef<HTMLDivElement>(null);
   const intl = useIntl();
 
@@ -168,54 +166,25 @@ export function A4ReportPreview({
     };
   }, [collectionPointsData, reportPeriod]);
 
-  // Load measurement type limits from database
-  React.useEffect(() => {
-    const loadMeasurementLimits = async () => {
-      try {
-        const supabase = getSupabase();
-        const { data, error } = await supabase
-          .from('tipos_medicao')
-          .select('nome, valor_minimo, valor_maximo')
-          .in('nome', ['pH', 'Cloro', 'Turbidez']);
-
-        if (error) throw error;
-
-        const limits: Record<string, {min?: number; max?: number}> = {};
-        data?.forEach(item => {
-          limits[item.nome] = {
-            min: item.valor_minimo,
-            max: item.valor_maximo
-          };
-        });
-
-        setWaterQualityLimits(limits);
-      } catch (error) {
-        console.error('Error loading measurement limits:', error);
-      }
-    };
-
-    loadMeasurementLimits();
-  }, []);
-
   // Load real water quality analysis data
   React.useEffect(() => {
     const loadRealData = async () => {
       if (!clientId) return;
-
+      
       setIsLoadingAnalysis(true);
       try {
         const startDate = format(reportPeriod.start, 'yyyy-MM-dd');
         const endDate = format(reportPeriod.end, 'yyyy-MM-dd');
-
+        
         const waterQualityData = await fetchWaterQualityData(clientId, startDate, endDate);
         const analysis = generateComplianceAnalysis(waterQualityData);
-
+        
         console.log('A4 Report - Real analysis loaded:', {
           totalSamples: analysis.totalSamples,
           complianceRate: analysis.complianceRate,
           parameterStats: analysis.parameterStats
         });
-
+        
         setRealAnalysis(analysis);
       } catch (error) {
         console.error('Error loading real analysis data:', error);
@@ -320,105 +289,16 @@ export function A4ReportPreview({
     }
   };
 
-  // Process water quality data grouped by collection point
-  const waterQualityPointsData = useMemo(() => {
-    if (!realAnalysis || !clientId) return null;
-
-    // Group samples by collection point
-    const pointsMap = new Map<string, {
-      id: string;
-      name: string;
-      areaName: string;
-      parameters: Map<string, {
-        name: string;
-        unit: string;
-        values: number[];
-        compliantCount: number;
-        nonCompliantCount: number;
-        limits: { min?: number; max?: number };
-        avg: number;
-        min: number;
-        max: number;
-        complianceRate: number;
-      }>;
-    }>();
-
-    // Process all samples and group by collection point
-    const samples = realAnalysis ? [] : []; // We need to get samples from the analysis
-
-    // For now, create mock structure based on realAnalysis parameter stats
-    // In real implementation, we'd need to fetch the actual samples grouped by point
-
-    // Create a generic point structure from the parameter stats
-    const parameters = ['pH', 'Cloro', 'Turbidez'];
-    const hasAnyData = parameters.some(param => {
-      const paramKey = param === 'pH' ? 'ph' : param === 'Cloro' ? 'chlorine' : 'turbidity';
-      return realAnalysis.parameterStats[paramKey]?.totalMeasurements > 0;
-    });
-
-    if (!hasAnyData) return null;
-
-    // Create points based on available data
-    // Since we don't have point-level breakdown yet, we'll create aggregated views
-    const pointId = 'all-points';
-    const pointData = {
-      id: pointId,
-      name: 'Todos os Pontos',
-      areaName: 'Consolidado',
-      parameters: new Map<string, any>()
-    };
-
-    parameters.forEach(param => {
-      const paramKey = param === 'pH' ? 'ph' : param === 'Cloro' ? 'chlorine' : 'turbidity';
-      const paramStats = realAnalysis.parameterStats[paramKey];
-
-      if (paramStats && paramStats.totalMeasurements > 0) {
-        const unit = param === 'pH' ? '' : param === 'Cloro' ? 'mg/L' : 'NTU';
-        const limits = waterQualityLimits[param] || {};
-
-        pointData.parameters.set(param, {
-          name: param === 'Cloro' ? 'Cloro Residual' : param,
-          unit,
-          values: [], // Would contain actual values for graphing
-          compliantCount: paramStats.compliantMeasurements,
-          nonCompliantCount: paramStats.totalMeasurements - paramStats.compliantMeasurements,
-          limits,
-          avg: paramStats.averageValue,
-          min: 0, // Would be calculated from actual values
-          max: 0, // Would be calculated from actual values
-          complianceRate: paramStats.complianceRate,
-          totalMeasurements: paramStats.totalMeasurements,
-          nonCompliantValues: paramStats.nonCompliantValues
-        });
-      }
-    });
-
-    if (pointData.parameters.size > 0) {
-      pointsMap.set(pointId, pointData);
-    }
-
-    return pointsMap.size > 0 ? Array.from(pointsMap.values()) : null;
-  }, [realAnalysis, reportPeriod, waterQualityLimits, clientId]);
-
-  // Calculate total pages: Summary + Volume pages + Water Quality pages + Table page
+  // Calculate total pages: Summary + Volume pages (if exists) + Table page (if reportData exists)
   const volumePointsPerPage = 4;
-  const waterQualityPointsPerPage = 4;
   const totalVolumePages = volumeData ? Math.ceil(volumeData.points.length / volumePointsPerPage) : 0;
-  const totalWaterQualityPages = waterQualityPointsData ? Math.ceil(waterQualityPointsData.length / waterQualityPointsPerPage) : 0;
-  const totalPages = 1 + totalVolumePages + totalWaterQualityPages + (reportData ? 1 : 0);
+  const totalPages = 1 + totalVolumePages + (reportData ? 1 : 0);
 
   const getCurrentVolumePoints = () => {
     if (!volumeData || currentPage <= 1 || currentPage > 1 + totalVolumePages) return [];
     const pageIndex = currentPage - 2;
     const startIndex = pageIndex * volumePointsPerPage;
     return volumeData.points.slice(startIndex, startIndex + volumePointsPerPage);
-  };
-
-  const getCurrentWaterQualityPoints = () => {
-    if (!waterQualityPointsData || currentPage <= 1 + totalVolumePages || currentPage > 1 + totalVolumePages + totalWaterQualityPages) return [];
-    const pageIndex = currentPage - (1 + totalVolumePages) - 1;
-    const startIndex = pageIndex * waterQualityPointsPerPage;
-    return waterQualityPointsData.slice(startIndex, startIndex + waterQualityPointsPerPage);
   };
 
   // Generate table data from reportData with improved merged columns logic
@@ -1029,155 +909,6 @@ export function A4ReportPreview({
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
                 <p>Página {currentPage} de {totalPages} | Relatório de Consumo de Volume</p>
-              </div>
-            </div>
-          )}
-
-          {/* Water Quality Report Pages */}
-          {currentPage > 1 + totalVolumePages && currentPage <= 1 + totalVolumePages + totalWaterQualityPages && waterQualityPointsData && (
-            <div className="h-full flex flex-col" data-page={currentPage}>
-              {/* Page Header */}
-              <div className="border-b-2 border-blue-600 pb-1 mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900 mb-0 flex items-center">
-                      <TrendingUp className="h-5 w-5 mr-2" />
-                      Relatório de Qualidade da Água
-                    </h2>
-                    <p className="text-gray-600 text-sm">
-                      Análise de conformidade - pH, Cloro Residual e Turbidez
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-600">Período</div>
-                    <div className="text-sm font-semibold">{format(reportPeriod.start, 'dd/MM/yyyy')} - {format(reportPeriod.end, 'dd/MM/yyyy')}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Water Quality Points Grid - 2 columns, same as volume reports */}
-              <div className="flex-1 grid grid-cols-2 gap-3">
-                {getCurrentWaterQualityPoints().map((point) => {
-                  // Get all parameters for this point
-                  const parameters = Array.from(point.parameters.entries());
-
-                  // Calculate overall compliance for the point
-                  const totalMeasurements = parameters.reduce((sum, [_, param]) => sum + param.totalMeasurements, 0);
-                  const totalCompliant = parameters.reduce((sum, [_, param]) => sum + param.compliantCount, 0);
-                  const overallComplianceRate = totalMeasurements > 0 ? (totalCompliant / totalMeasurements) * 100 : 100;
-                  const isCompliant = overallComplianceRate >= 95;
-                  const totalNonCompliant = totalMeasurements - totalCompliant;
-
-                  return (
-                    <div key={point.id} className="bg-gray-50 p-2 rounded-lg border-2 border-gray-200 flex flex-col relative">
-                      {/* Status Badge - Top Right */}
-                      <div className="absolute top-2 right-2">
-                        {isCompliant ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            Conforme
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            {totalNonCompliant} Não Conforme(s)
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Point Header */}
-                      <div className="mb-1 pr-20">
-                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{point.name}</h3>
-                        {point.areaName && (
-                          <p className="text-xs text-gray-600 leading-tight">{point.areaName}</p>
-                        )}
-                      </div>
-
-                      {/* Parameters Display - One per row */}
-                      <div className="space-y-2 flex-1">
-                        {parameters.map(([paramName, param]) => {
-                          const paramIsCompliant = param.complianceRate >= 95;
-
-                          return (
-                            <div key={paramName} className="bg-white p-2 rounded border border-gray-200">
-                              {/* Parameter Header with mini badge */}
-                              <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-semibold text-gray-900 text-xs">{param.name}</h4>
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                                  paramIsCompliant ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }`}>
-                                  {param.complianceRate.toFixed(1)}%
-                                </span>
-                              </div>
-
-                              {/* Visual indicator bar */}
-                              <div className="relative h-12 bg-gradient-to-t from-gray-100 to-gray-50 rounded p-1 border border-gray-200">
-                                {/* Limit lines */}
-                                {param.limits.min !== undefined && (
-                                  <div className="absolute left-1 right-1 bottom-[25%] border-t border-dashed border-red-500 z-10">
-                                    <span className="absolute -right-1 -top-2 text-[8px] text-red-700 font-bold bg-red-50 px-1 py-0.5 rounded border border-red-200 whitespace-nowrap">
-                                      Min: {param.limits.min}{param.unit}
-                                    </span>
-                                  </div>
-                                )}
-                                {param.limits.max !== undefined && (
-                                  <div className="absolute left-1 right-1 top-[25%] border-t border-dashed border-red-500 z-10">
-                                    <span className="absolute -right-1 -top-2 text-[8px] text-red-700 font-bold bg-red-50 px-1 py-0.5 rounded border border-red-200 whitespace-nowrap">
-                                      Max: {param.limits.max}{param.unit}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Center info */}
-                                <div className="relative z-20 h-full flex items-center justify-center">
-                                  <div className="text-center">
-                                    <div className="text-base font-bold text-blue-700">{param.avg.toFixed(2)}{param.unit}</div>
-                                    <div className="text-[9px] text-gray-600">Média</div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Parameter Stats */}
-                              <div className="grid grid-cols-3 gap-1 mt-1 text-[9px]">
-                                <div className="text-center">
-                                  <div className="font-semibold text-blue-700">{param.totalMeasurements}</div>
-                                  <div className="text-gray-600">Medições</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="font-semibold text-green-700">{param.compliantCount}</div>
-                                  <div className="text-gray-600">Conformes</div>
-                                </div>
-                                <div className="text-center">
-                                  <div className="font-semibold text-red-700">{param.nonCompliantCount}</div>
-                                  <div className="text-gray-600">Não Conf.</div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Overall Stats */}
-                      <div className="grid grid-cols-2 gap-1.5 text-xs mt-2">
-                        <div className="bg-white p-1.5 rounded border border-gray-200">
-                          <div className="text-gray-600 text-[10px]">Total Medições</div>
-                          <div className="font-bold text-blue-700">{totalMeasurements}</div>
-                        </div>
-                        <div className="bg-white p-1.5 rounded border border-gray-200">
-                          <div className="text-gray-600 text-[10px]">Taxa Conformidade</div>
-                          <div className={`font-bold ${overallComplianceRate >= 95 ? 'text-green-700' : overallComplianceRate >= 80 ? 'text-yellow-700' : 'text-red-700'}`}>
-                            {overallComplianceRate.toFixed(1)}%
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Footer */}
-              <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
-                <p>Página {currentPage} de {totalPages} | Relatório de Qualidade da Água</p>
               </div>
             </div>
           )}

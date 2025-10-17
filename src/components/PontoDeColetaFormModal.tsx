@@ -101,6 +101,7 @@ export function PontoDeColetaFormModal({
       const { data, error } = await supabase
         .from('tipos_medicao')
         .select('id, nome')
+        .neq('disabled', true)
         .order('nome', { ascending: true });
 
       if (error) throw error;

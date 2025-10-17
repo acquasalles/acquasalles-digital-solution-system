@@ -319,18 +319,55 @@ export function A4ReportPreview({
     }
   };
 
-  // Process water quality data for graphs
-  const waterQualityGraphData = useMemo(() => {
+  // Process water quality data grouped by collection point
+  const waterQualityPointsData = useMemo(() => {
     if (!realAnalysis || !clientId) return null;
 
-    const allDates = eachDayOfInterval({
-      start: reportPeriod.start,
-      end: reportPeriod.end
+    const supabase = require('../lib/supabase').getSupabase();
+
+    // Group samples by collection point
+    const pointsMap = new Map<string, {
+      id: string;
+      name: string;
+      areaName: string;
+      parameters: Map<string, {
+        name: string;
+        unit: string;
+        values: number[];
+        compliantCount: number;
+        nonCompliantCount: number;
+        limits: { min?: number; max?: number };
+        avg: number;
+        min: number;
+        max: number;
+        complianceRate: number;
+      }>;
+    }>();
+
+    // Process all samples and group by collection point
+    const samples = realAnalysis ? [] : []; // We need to get samples from the analysis
+
+    // For now, create mock structure based on realAnalysis parameter stats
+    // In real implementation, we'd need to fetch the actual samples grouped by point
+
+    // Create a generic point structure from the parameter stats
+    const parameters = ['pH', 'Cloro', 'Turbidez'];
+    const hasAnyData = parameters.some(param => {
+      const paramKey = param === 'pH' ? 'ph' : param === 'Cloro' ? 'chlorine' : 'turbidity';
+      return realAnalysis.parameterStats[paramKey]?.totalMeasurements > 0;
     });
 
-    // Prepare data for each parameter
-    const parameters = ['pH', 'Cloro', 'Turbidez'];
-    const graphData: Record<string, any> = {};
+    if (!hasAnyData) return null;
+
+    // Create points based on available data
+    // Since we don't have point-level breakdown yet, we'll create aggregated views
+    const pointId = 'all-points';
+    const pointData = {
+      id: pointId,
+      name: 'Todos os Pontos',
+      areaName: 'Consolidado',
+      parameters: new Map<string, any>()
+    };
 
     parameters.forEach(param => {
       const paramKey = param === 'pH' ? 'ph' : param === 'Cloro' ? 'chlorine' : 'turbidity';
@@ -340,30 +377,49 @@ export function A4ReportPreview({
         const unit = param === 'pH' ? '' : param === 'Cloro' ? 'mg/L' : 'NTU';
         const limits = waterQualityLimits[param] || {};
 
-        graphData[param] = {
+        pointData.parameters.set(param, {
           name: param === 'Cloro' ? 'Cloro Residual' : param,
           unit,
-          stats: paramStats,
+          values: [], // Would contain actual values for graphing
+          compliantCount: paramStats.compliantMeasurements,
+          nonCompliantCount: paramStats.totalMeasurements - paramStats.compliantMeasurements,
           limits,
-          hasData: true
-        };
+          avg: paramStats.averageValue,
+          min: 0, // Would be calculated from actual values
+          max: 0, // Would be calculated from actual values
+          complianceRate: paramStats.complianceRate,
+          totalMeasurements: paramStats.totalMeasurements,
+          nonCompliantValues: paramStats.nonCompliantValues
+        });
       }
     });
 
-    return Object.keys(graphData).length > 0 ? graphData : null;
+    if (pointData.parameters.size > 0) {
+      pointsMap.set(pointId, pointData);
+    }
+
+    return pointsMap.size > 0 ? Array.from(pointsMap.values()) : null;
   }, [realAnalysis, reportPeriod, waterQualityLimits, clientId]);
 
   // Calculate total pages: Summary + Volume pages + Water Quality pages + Table page
   const volumePointsPerPage = 4;
+  const waterQualityPointsPerPage = 4;
   const totalVolumePages = volumeData ? Math.ceil(volumeData.points.length / volumePointsPerPage) : 0;
-  const waterQualityPages = waterQualityGraphData ? 1 : 0;
-  const totalPages = 1 + totalVolumePages + waterQualityPages + (reportData ? 1 : 0);
+  const totalWaterQualityPages = waterQualityPointsData ? Math.ceil(waterQualityPointsData.length / waterQualityPointsPerPage) : 0;
+  const totalPages = 1 + totalVolumePages + totalWaterQualityPages + (reportData ? 1 : 0);
 
   const getCurrentVolumePoints = () => {
     if (!volumeData || currentPage <= 1 || currentPage > 1 + totalVolumePages) return [];
     const pageIndex = currentPage - 2;
     const startIndex = pageIndex * volumePointsPerPage;
     return volumeData.points.slice(startIndex, startIndex + volumePointsPerPage);
+  };
+
+  const getCurrentWaterQualityPoints = () => {
+    if (!waterQualityPointsData || currentPage <= 1 + totalVolumePages || currentPage > 1 + totalVolumePages + totalWaterQualityPages) return [];
+    const pageIndex = currentPage - (1 + totalVolumePages) - 1;
+    const startIndex = pageIndex * waterQualityPointsPerPage;
+    return waterQualityPointsData.slice(startIndex, startIndex + waterQualityPointsPerPage);
   };
 
   // Generate table data from reportData with improved merged columns logic
@@ -978,8 +1034,8 @@ export function A4ReportPreview({
             </div>
           )}
 
-          {/* Water Quality Graphs Page */}
-          {waterQualityGraphData && currentPage === 1 + totalVolumePages + 1 && (
+          {/* Water Quality Report Pages */}
+          {currentPage > 1 + totalVolumePages && currentPage <= 1 + totalVolumePages + totalWaterQualityPages && waterQualityPointsData && (
             <div className="h-full flex flex-col" data-page={currentPage}>
               {/* Page Header */}
               <div className="border-b-2 border-blue-600 pb-1 mb-4">
@@ -987,10 +1043,10 @@ export function A4ReportPreview({
                   <div>
                     <h2 className="text-xl font-bold text-gray-900 mb-0 flex items-center">
                       <TrendingUp className="h-5 w-5 mr-2" />
-                      Análise de Qualidade da Água
+                      Relatório de Qualidade da Água
                     </h2>
                     <p className="text-gray-600 text-sm">
-                      Monitoramento de pH, Cloro Residual e Turbidez
+                      Análise de conformidade - pH, Cloro Residual e Turbidez
                     </p>
                   </div>
                   <div className="text-right">
@@ -1000,20 +1056,21 @@ export function A4ReportPreview({
                 </div>
               </div>
 
-              {/* Water Quality Graphs Grid - 3 parameters */}
-              <div className="flex-1 grid grid-rows-3 gap-3">
-                {Object.entries(waterQualityGraphData).map(([param, data]: [string, any]) => {
-                  const paramKey = param === 'pH' ? 'ph' : param === 'Cloro' ? 'chlorine' : 'turbidity';
-                  const limits = data.limits;
-                  const stats = data.stats;
-                  const unit = data.unit;
+              {/* Water Quality Points Grid - 2 columns, same as volume reports */}
+              <div className="flex-1 grid grid-cols-2 gap-3">
+                {getCurrentWaterQualityPoints().map((point) => {
+                  // Get all parameters for this point
+                  const parameters = Array.from(point.parameters.entries());
 
-                  // Calculate compliance status
-                  const isCompliant = stats.complianceRate >= 95;
-                  const nonCompliantCount = stats.nonCompliantValues?.length || 0;
+                  // Calculate overall compliance for the point
+                  const totalMeasurements = parameters.reduce((sum, [_, param]) => sum + param.totalMeasurements, 0);
+                  const totalCompliant = parameters.reduce((sum, [_, param]) => sum + param.compliantCount, 0);
+                  const overallComplianceRate = totalMeasurements > 0 ? (totalCompliant / totalMeasurements) * 100 : 100;
+                  const isCompliant = overallComplianceRate >= 95;
+                  const totalNonCompliant = totalMeasurements - totalCompliant;
 
                   return (
-                    <div key={param} className="bg-gray-50 p-2 rounded-lg border-2 border-gray-200 flex relative">
+                    <div key={point.id} className="bg-gray-50 p-2 rounded-lg border-2 border-gray-200 flex flex-col relative">
                       {/* Status Badge - Top Right */}
                       <div className="absolute top-2 right-2">
                         {isCompliant ? (
@@ -1024,76 +1081,93 @@ export function A4ReportPreview({
                         ) : (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
                             <AlertTriangle className="h-3 w-3 mr-1" />
-                            {nonCompliantCount} Não Conforme(s)
+                            {totalNonCompliant} Não Conforme(s)
                           </span>
                         )}
                       </div>
 
-                      {/* Left Side: Info and Stats */}
-                      <div className="w-1/3 pr-2 flex flex-col">
-                        {/* Parameter Header */}
-                        <div className="mb-2 pr-20">
-                          <h3 className="font-bold text-gray-900 text-base leading-tight">{data.name}</h3>
-                          {unit && <p className="text-xs text-gray-600 leading-tight">Unidade: {unit}</p>}
-                        </div>
-
-                        {/* Statistics */}
-                        <div className="grid grid-cols-2 gap-1.5 text-xs mb-2">
-                          <div className="bg-white p-1.5 rounded border border-gray-200">
-                            <div className="text-gray-600 text-[10px]">Total Medições</div>
-                            <div className="font-bold text-blue-700">{stats.totalMeasurements}</div>
-                          </div>
-                          <div className="bg-white p-1.5 rounded border border-gray-200">
-                            <div className="text-gray-600 text-[10px]">Média</div>
-                            <div className="font-bold text-green-700">{stats.averageValue.toFixed(2)} {unit}</div>
-                          </div>
-                          <div className="bg-white p-1.5 rounded border border-gray-200">
-                            <div className="text-gray-600 text-[10px]">Conformes</div>
-                            <div className="font-bold text-teal-700">{stats.compliantMeasurements}</div>
-                          </div>
-                          <div className="bg-white p-1.5 rounded border border-gray-200">
-                            <div className="text-gray-600 text-[10px]">Taxa Conformidade</div>
-                            <div className={`font-bold ${stats.complianceRate >= 95 ? 'text-green-700' : stats.complianceRate >= 80 ? 'text-yellow-700' : 'text-red-700'}`}>
-                              {stats.complianceRate.toFixed(1)}%
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Limits Info */}
-                        <div className="bg-blue-50 p-1.5 rounded border border-blue-200 text-xs mt-auto">
-                          <div className="font-medium text-blue-900 mb-1">Limites de Conformidade</div>
-                          {limits.min !== undefined && (
-                            <div className="text-blue-700 text-[10px]">Mínimo: {limits.min} {unit}</div>
-                          )}
-                          {limits.max !== undefined && (
-                            <div className="text-blue-700 text-[10px]">Máximo: {limits.max} {unit}</div>
-                          )}
-                        </div>
+                      {/* Point Header */}
+                      <div className="mb-1 pr-20">
+                        <h3 className="font-bold text-gray-900 text-sm leading-tight">{point.name}</h3>
+                        {point.areaName && (
+                          <p className="text-xs text-gray-600 leading-tight">{point.areaName}</p>
+                        )}
                       </div>
 
-                      {/* Right Side: Visual Graph (placeholder for now) */}
-                      <div className="flex-1 bg-white p-2 rounded border border-gray-200">
-                        <div className="relative h-full flex items-center justify-center bg-gradient-to-t from-gray-100 to-gray-50 rounded-md border border-gray-200">
-                          {/* Compliance lines */}
-                          {limits.min !== undefined && (
-                            <div className="absolute left-2 right-2 bottom-[20%] border-t-2 border-dashed border-red-600 z-10">
-                              <span className="absolute -right-2 -top-2.5 text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap shadow-sm">
-                                Min: {limits.min} {unit}
-                              </span>
-                            </div>
-                          )}
-                          {limits.max !== undefined && (
-                            <div className="absolute left-2 right-2 top-[20%] border-t-2 border-dashed border-red-600 z-10">
-                              <span className="absolute -right-2 -top-2.5 text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap shadow-sm">
-                                Max: {limits.max} {unit}
-                              </span>
-                            </div>
-                          )}
+                      {/* Parameters Display - One per row */}
+                      <div className="space-y-2 flex-1">
+                        {parameters.map(([paramName, param]) => {
+                          const paramIsCompliant = param.complianceRate >= 95;
 
-                          <div className="text-center text-gray-500 text-sm">
-                            <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                            <p className="text-xs">Gráfico de Tendência</p>
-                            <p className="text-[10px]">{stats.totalMeasurements} medições no período</p>
+                          return (
+                            <div key={paramName} className="bg-white p-2 rounded border border-gray-200">
+                              {/* Parameter Header with mini badge */}
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-semibold text-gray-900 text-xs">{param.name}</h4>
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  paramIsCompliant ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {param.complianceRate.toFixed(1)}%
+                                </span>
+                              </div>
+
+                              {/* Visual indicator bar */}
+                              <div className="relative h-12 bg-gradient-to-t from-gray-100 to-gray-50 rounded p-1 border border-gray-200">
+                                {/* Limit lines */}
+                                {param.limits.min !== undefined && (
+                                  <div className="absolute left-1 right-1 bottom-[25%] border-t border-dashed border-red-500 z-10">
+                                    <span className="absolute -right-1 -top-2 text-[8px] text-red-700 font-bold bg-red-50 px-1 py-0.5 rounded border border-red-200 whitespace-nowrap">
+                                      Min: {param.limits.min}{param.unit}
+                                    </span>
+                                  </div>
+                                )}
+                                {param.limits.max !== undefined && (
+                                  <div className="absolute left-1 right-1 top-[25%] border-t border-dashed border-red-500 z-10">
+                                    <span className="absolute -right-1 -top-2 text-[8px] text-red-700 font-bold bg-red-50 px-1 py-0.5 rounded border border-red-200 whitespace-nowrap">
+                                      Max: {param.limits.max}{param.unit}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Center info */}
+                                <div className="relative z-20 h-full flex items-center justify-center">
+                                  <div className="text-center">
+                                    <div className="text-base font-bold text-blue-700">{param.avg.toFixed(2)}{param.unit}</div>
+                                    <div className="text-[9px] text-gray-600">Média</div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Parameter Stats */}
+                              <div className="grid grid-cols-3 gap-1 mt-1 text-[9px]">
+                                <div className="text-center">
+                                  <div className="font-semibold text-blue-700">{param.totalMeasurements}</div>
+                                  <div className="text-gray-600">Medições</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-semibold text-green-700">{param.compliantCount}</div>
+                                  <div className="text-gray-600">Conformes</div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="font-semibold text-red-700">{param.nonCompliantCount}</div>
+                                  <div className="text-gray-600">Não Conf.</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Overall Stats */}
+                      <div className="grid grid-cols-2 gap-1.5 text-xs mt-2">
+                        <div className="bg-white p-1.5 rounded border border-gray-200">
+                          <div className="text-gray-600 text-[10px]">Total Medições</div>
+                          <div className="font-bold text-blue-700">{totalMeasurements}</div>
+                        </div>
+                        <div className="bg-white p-1.5 rounded border border-gray-200">
+                          <div className="text-gray-600 text-[10px]">Taxa Conformidade</div>
+                          <div className={`font-bold ${overallComplianceRate >= 95 ? 'text-green-700' : overallComplianceRate >= 80 ? 'text-yellow-700' : 'text-red-700'}`}>
+                            {overallComplianceRate.toFixed(1)}%
                           </div>
                         </div>
                       </div>
@@ -1104,7 +1178,7 @@ export function A4ReportPreview({
 
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
-                <p>Página {currentPage} de {totalPages} | Análise de Qualidade da Água</p>
+                <p>Página {currentPage} de {totalPages} | Relatório de Qualidade da Água</p>
               </div>
             </div>
           )}

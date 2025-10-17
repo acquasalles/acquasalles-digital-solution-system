@@ -8,6 +8,10 @@ interface PontoDeColeta {
   descricao?: string;
   localizacao?: any;
   tipos_medicao?: string[];
+  outorga_volume_max_value?: number;
+  outorga_volume_max_unit?: string;
+  outorga_horimetro_max_value?: number;
+  outorga_horimetro_max_unit?: string;
 }
 
 interface TipoMedicao {
@@ -37,6 +41,10 @@ export function PontoDeColetaFormModal({
   const [localizacao, setLocalizacao] = useState('');
   const [selectedTiposMedicao, setSelectedTiposMedicao] = useState<string[]>([]);
   const [availableTiposMedicao, setAvailableTiposMedicao] = useState<TipoMedicao[]>([]);
+  const [outorgaVolumeValue, setOutorgaVolumeValue] = useState<string>('');
+  const [outorgaVolumeUnit, setOutorgaVolumeUnit] = useState<string>('m³');
+  const [outorgaHorimetroValue, setOutorgaHorimetroValue] = useState<string>('');
+  const [outorgaHorimetroUnit, setOutorgaHorimetroUnit] = useState<string>('horas');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,12 +61,21 @@ export function PontoDeColetaFormModal({
        const tiposMedicao = Array.isArray(pontoData.tipos_medicao) ? pontoData.tipos_medicao : [];
        console.log('Carregando tipos de medição para edição:', tiposMedicao);
        setSelectedTiposMedicao(tiposMedicao);
+       // Carregar dados de outorga
+       setOutorgaVolumeValue(pontoData.outorga_volume_max_value?.toString() || '');
+       setOutorgaVolumeUnit(pontoData.outorga_volume_max_unit || 'm³');
+       setOutorgaHorimetroValue(pontoData.outorga_horimetro_max_value?.toString() || '');
+       setOutorgaHorimetroUnit(pontoData.outorga_horimetro_max_unit || 'horas');
       } else {
         // Modo de criação
         setNome('');
         setDescricao('');
         setLocalizacao('');
         setSelectedTiposMedicao([]);
+        setOutorgaVolumeValue('');
+        setOutorgaVolumeUnit('m³');
+        setOutorgaHorimetroValue('');
+        setOutorgaHorimetroUnit('horas');
       }
     }
   }, [isOpen, pontoData]);
@@ -114,6 +131,10 @@ export function PontoDeColetaFormModal({
         tipos_medicao: selectedTiposMedicao,
         area_de_trabalho_id: areaId,
         cliente_id: parseInt(clienteId),
+        outorga_volume_max_value: outorgaVolumeValue ? parseFloat(outorgaVolumeValue) : null,
+        outorga_volume_max_unit: outorgaVolumeValue ? outorgaVolumeUnit : null,
+        outorga_horimetro_max_value: outorgaHorimetroValue ? parseFloat(outorgaHorimetroValue) : null,
+        outorga_horimetro_max_unit: outorgaHorimetroValue ? outorgaHorimetroUnit : null,
       };
 
       if (localizacao.trim()) {
@@ -262,8 +283,82 @@ export function PontoDeColetaFormModal({
                   <p className="text-sm text-gray-500">Carregando tipos de medição...</p>
                 )}
               </div>
-              
+
             </div>
+
+            {/* Outorga Fields - Only show if Registro (m3) is selected */}
+            {availableTiposMedicao.some(tipo => tipo.nome === 'Registro (m3)' && selectedTiposMedicao.includes(tipo.id)) && (
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Configurações de Outorga</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Configure os limites da outorga para monitoramento de conformidade
+                </p>
+
+                <div className="space-y-4">
+                  {/* Volume Max */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Limite Máximo de Volume Diário
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={outorgaVolumeValue}
+                        onChange={(e) => setOutorgaVolumeValue(e.target.value)}
+                        step="0.01"
+                        min="0"
+                        placeholder="Ex: 100.00"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loading}
+                      />
+                      <select
+                        value={outorgaVolumeUnit}
+                        onChange={(e) => setOutorgaVolumeUnit(e.target.value)}
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loading}
+                      >
+                        <option value="m³">m³</option>
+                        <option value="L">L</option>
+                      </select>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Limite diário de volume permitido pela outorga
+                    </p>
+                  </div>
+
+                  {/* Horimetro Max */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Limite Máximo de Horímetro Diário
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        value={outorgaHorimetroValue}
+                        onChange={(e) => setOutorgaHorimetroValue(e.target.value)}
+                        step="0.01"
+                        min="0"
+                        placeholder="Ex: 24.00"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loading}
+                      />
+                      <select
+                        value={outorgaHorimetroUnit}
+                        onChange={(e) => setOutorgaHorimetroUnit(e.target.value)}
+                        className="w-24 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loading}
+                      >
+                        <option value="horas">horas</option>
+                        <option value="minutos">minutos</option>
+                      </select>
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Limite diário de horímetro permitido pela outorga
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
               <button

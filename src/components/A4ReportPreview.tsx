@@ -636,7 +636,7 @@ export function A4ReportPreview({
                     
                     if (allNonCompliantValues.length === 0) {
                       return (
-                        <div className="bg-green-50 p-2 rounded border border-green-200 text-green-800 text-center text-xs">
+                        <div className="bg-gray-50 p-2 rounded border border-green-200 text-green-800 text-center text-xs">
                           <CheckCircle className="h-4 w-4 inline mr-1" />
                           Nenhuma não conformidade detectada no período
                         </div>
@@ -753,7 +753,6 @@ export function A4ReportPreview({
               {/* Real data summary */}
               {realAnalysis && (
                 <div className="bg-green-50 p-3 rounded-lg border border-green-200 mb-4">
-                  <h4 className="font-semibold text-green-900 mb-2 text-sm">Dados Reais Carregados</h4>
                   <div className="grid grid-cols-3 gap-2 text-xs text-green-800">
                     <div>Total de Amostras: <strong>{realAnalysis.totalSamples}</strong></div>
                     <div>Taxa de Conformidade: <strong>{realAnalysis.complianceRate.toFixed(1)}%</strong></div>
@@ -762,16 +761,6 @@ export function A4ReportPreview({
                 </div>
               )}
 
-              {/* Show data source indicator */}
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-                <div className="text-xs text-gray-600 text-center">
-                  {realAnalysis ? (
-                    <span className="text-green-600 font-medium">✓ Usando dados reais da análise de conformidade</span>
-                  ) : (
-                    <span className="text-orange-600 font-medium">⚠ Usando dados estimados (carregando dados reais...)</span>
-                  )}
-                </div>
-              </div>
 
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">

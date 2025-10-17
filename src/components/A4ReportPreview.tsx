@@ -89,6 +89,7 @@ export function A4ReportPreview({
   const [realAnalysis, setRealAnalysis] = useState<ComplianceAnalysis | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [isGeneratingPDFState, setIsGeneratingPDFState] = useState(false);
+  const [waterQualityLimits, setWaterQualityLimits] = useState<Record<string, {min?: number; max?: number}>>({});
   const reportRef = useRef<HTMLDivElement>(null);
   const intl = useIntl();
 
@@ -166,25 +167,54 @@ export function A4ReportPreview({
     };
   }, [collectionPointsData, reportPeriod]);
 
+  // Load measurement type limits from database
+  React.useEffect(() => {
+    const loadMeasurementLimits = async () => {
+      try {
+        const supabase = require('../lib/supabase').getSupabase();
+        const { data, error } = await supabase
+          .from('tipos_medicao')
+          .select('nome, valor_minimo, valor_maximo')
+          .in('nome', ['pH', 'Cloro', 'Turbidez']);
+
+        if (error) throw error;
+
+        const limits: Record<string, {min?: number; max?: number}> = {};
+        data?.forEach(item => {
+          limits[item.nome] = {
+            min: item.valor_minimo,
+            max: item.valor_maximo
+          };
+        });
+
+        setWaterQualityLimits(limits);
+      } catch (error) {
+        console.error('Error loading measurement limits:', error);
+      }
+    };
+
+    loadMeasurementLimits();
+  }, []);
+
   // Load real water quality analysis data
   React.useEffect(() => {
     const loadRealData = async () => {
       if (!clientId) return;
-      
+
       setIsLoadingAnalysis(true);
       try {
         const startDate = format(reportPeriod.start, 'yyyy-MM-dd');
         const endDate = format(reportPeriod.end, 'yyyy-MM-dd');
-        
+
         const waterQualityData = await fetchWaterQualityData(clientId, startDate, endDate);
         const analysis = generateComplianceAnalysis(waterQualityData);
-        
+
         console.log('A4 Report - Real analysis loaded:', {
           totalSamples: analysis.totalSamples,
           complianceRate: analysis.complianceRate,
           parameterStats: analysis.parameterStats
         });
-        
+
         setRealAnalysis(analysis);
       } catch (error) {
         console.error('Error loading real analysis data:', error);
@@ -289,10 +319,45 @@ export function A4ReportPreview({
     }
   };
 
-  // Calculate total pages: Summary + Volume pages (if exists) + Table page (if reportData exists)
+  // Process water quality data for graphs
+  const waterQualityGraphData = useMemo(() => {
+    if (!realAnalysis || !clientId) return null;
+
+    const allDates = eachDayOfInterval({
+      start: reportPeriod.start,
+      end: reportPeriod.end
+    });
+
+    // Prepare data for each parameter
+    const parameters = ['pH', 'Cloro', 'Turbidez'];
+    const graphData: Record<string, any> = {};
+
+    parameters.forEach(param => {
+      const paramKey = param === 'pH' ? 'ph' : param === 'Cloro' ? 'chlorine' : 'turbidity';
+      const paramStats = realAnalysis.parameterStats[paramKey];
+
+      if (paramStats && paramStats.totalMeasurements > 0) {
+        const unit = param === 'pH' ? '' : param === 'Cloro' ? 'mg/L' : 'NTU';
+        const limits = waterQualityLimits[param] || {};
+
+        graphData[param] = {
+          name: param === 'Cloro' ? 'Cloro Residual' : param,
+          unit,
+          stats: paramStats,
+          limits,
+          hasData: true
+        };
+      }
+    });
+
+    return Object.keys(graphData).length > 0 ? graphData : null;
+  }, [realAnalysis, reportPeriod, waterQualityLimits, clientId]);
+
+  // Calculate total pages: Summary + Volume pages + Water Quality pages + Table page
   const volumePointsPerPage = 4;
   const totalVolumePages = volumeData ? Math.ceil(volumeData.points.length / volumePointsPerPage) : 0;
-  const totalPages = 1 + totalVolumePages + (reportData ? 1 : 0);
+  const waterQualityPages = waterQualityGraphData ? 1 : 0;
+  const totalPages = 1 + totalVolumePages + waterQualityPages + (reportData ? 1 : 0);
 
   const getCurrentVolumePoints = () => {
     if (!volumeData || currentPage <= 1 || currentPage > 1 + totalVolumePages) return [];
@@ -909,6 +974,137 @@ export function A4ReportPreview({
               {/* Footer */}
               <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
                 <p>Página {currentPage} de {totalPages} | Relatório de Consumo de Volume</p>
+              </div>
+            </div>
+          )}
+
+          {/* Water Quality Graphs Page */}
+          {waterQualityGraphData && currentPage === 1 + totalVolumePages + 1 && (
+            <div className="h-full flex flex-col" data-page={currentPage}>
+              {/* Page Header */}
+              <div className="border-b-2 border-blue-600 pb-1 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-0 flex items-center">
+                      <TrendingUp className="h-5 w-5 mr-2" />
+                      Análise de Qualidade da Água
+                    </h2>
+                    <p className="text-gray-600 text-sm">
+                      Monitoramento de pH, Cloro Residual e Turbidez
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-gray-600">Período</div>
+                    <div className="text-sm font-semibold">{format(reportPeriod.start, 'dd/MM/yyyy')} - {format(reportPeriod.end, 'dd/MM/yyyy')}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Water Quality Graphs Grid - 3 parameters */}
+              <div className="flex-1 grid grid-rows-3 gap-3">
+                {Object.entries(waterQualityGraphData).map(([param, data]: [string, any]) => {
+                  const paramKey = param === 'pH' ? 'ph' : param === 'Cloro' ? 'chlorine' : 'turbidity';
+                  const limits = data.limits;
+                  const stats = data.stats;
+                  const unit = data.unit;
+
+                  // Calculate compliance status
+                  const isCompliant = stats.complianceRate >= 95;
+                  const nonCompliantCount = stats.nonCompliantValues?.length || 0;
+
+                  return (
+                    <div key={param} className="bg-gray-50 p-2 rounded-lg border-2 border-gray-200 flex relative">
+                      {/* Status Badge - Top Right */}
+                      <div className="absolute top-2 right-2">
+                        {isCompliant ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Conforme
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            {nonCompliantCount} Não Conforme(s)
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Left Side: Info and Stats */}
+                      <div className="w-1/3 pr-2 flex flex-col">
+                        {/* Parameter Header */}
+                        <div className="mb-2 pr-20">
+                          <h3 className="font-bold text-gray-900 text-base leading-tight">{data.name}</h3>
+                          {unit && <p className="text-xs text-gray-600 leading-tight">Unidade: {unit}</p>}
+                        </div>
+
+                        {/* Statistics */}
+                        <div className="grid grid-cols-2 gap-1.5 text-xs mb-2">
+                          <div className="bg-white p-1.5 rounded border border-gray-200">
+                            <div className="text-gray-600 text-[10px]">Total Medições</div>
+                            <div className="font-bold text-blue-700">{stats.totalMeasurements}</div>
+                          </div>
+                          <div className="bg-white p-1.5 rounded border border-gray-200">
+                            <div className="text-gray-600 text-[10px]">Média</div>
+                            <div className="font-bold text-green-700">{stats.averageValue.toFixed(2)} {unit}</div>
+                          </div>
+                          <div className="bg-white p-1.5 rounded border border-gray-200">
+                            <div className="text-gray-600 text-[10px]">Conformes</div>
+                            <div className="font-bold text-teal-700">{stats.compliantMeasurements}</div>
+                          </div>
+                          <div className="bg-white p-1.5 rounded border border-gray-200">
+                            <div className="text-gray-600 text-[10px]">Taxa Conformidade</div>
+                            <div className={`font-bold ${stats.complianceRate >= 95 ? 'text-green-700' : stats.complianceRate >= 80 ? 'text-yellow-700' : 'text-red-700'}`}>
+                              {stats.complianceRate.toFixed(1)}%
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Limits Info */}
+                        <div className="bg-blue-50 p-1.5 rounded border border-blue-200 text-xs mt-auto">
+                          <div className="font-medium text-blue-900 mb-1">Limites de Conformidade</div>
+                          {limits.min !== undefined && (
+                            <div className="text-blue-700 text-[10px]">Mínimo: {limits.min} {unit}</div>
+                          )}
+                          {limits.max !== undefined && (
+                            <div className="text-blue-700 text-[10px]">Máximo: {limits.max} {unit}</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right Side: Visual Graph (placeholder for now) */}
+                      <div className="flex-1 bg-white p-2 rounded border border-gray-200">
+                        <div className="relative h-full flex items-center justify-center bg-gradient-to-t from-gray-100 to-gray-50 rounded-md border border-gray-200">
+                          {/* Compliance lines */}
+                          {limits.min !== undefined && (
+                            <div className="absolute left-2 right-2 bottom-[20%] border-t-2 border-dashed border-red-600 z-10">
+                              <span className="absolute -right-2 -top-2.5 text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap shadow-sm">
+                                Min: {limits.min} {unit}
+                              </span>
+                            </div>
+                          )}
+                          {limits.max !== undefined && (
+                            <div className="absolute left-2 right-2 top-[20%] border-t-2 border-dashed border-red-600 z-10">
+                              <span className="absolute -right-2 -top-2.5 text-[10px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-200 whitespace-nowrap shadow-sm">
+                                Max: {limits.max} {unit}
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="text-center text-gray-500 text-sm">
+                            <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                            <p className="text-xs">Gráfico de Tendência</p>
+                            <p className="text-[10px]">{stats.totalMeasurements} medições no período</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
+                <p>Página {currentPage} de {totalPages} | Análise de Qualidade da Água</p>
               </div>
             </div>
           )}

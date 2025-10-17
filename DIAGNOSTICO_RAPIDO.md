@@ -11,10 +11,13 @@ npm run dev
 http://localhost:5173/test-specific-point.html
 ```
 
-### Passo 2: Configurar credenciais
-A ferramenta já está pré-configurada! Apenas clique em **"▶️ Executar Todos"**
+### Passo 2: Carregar credenciais
+Clique no botão: **📁 Carregar do .env**
 
-### Passo 3: Ler o resultado
+### Passo 3: Executar diagnóstico
+Clique no botão: **▶️ Executar Todos**
+
+### Passo 4: Ler o resultado
 A ferramenta vai mostrar exatamente qual é o problema:
 - ✅ Verde = Tudo OK
 - ❌ Vermelho = Problema encontrado

@@ -130,6 +130,17 @@
 
         let supabase = null;
 
+        // Wait for Supabase library to load
+        function waitForSupabase() {
+            return new Promise((resolve) => {
+                if (window.supabase) {
+                    resolve();
+                } else {
+                    setTimeout(() => waitForSupabase().then(resolve), 100);
+                }
+            });
+        }
+
         function log(message, type = 'info') {
             const colors = {
                 info: '#569cd6',
@@ -149,7 +160,7 @@
             document.getElementById('resultsContent').innerHTML = '<em class="warning">Resultados limpos. Execute os testes novamente.</em>';
         }
 
-        function saveCredentials() {
+        async function saveCredentials() {
             const url = document.getElementById('supabaseUrl').value;
             const key = document.getElementById('supabaseKey').value;
 
@@ -159,17 +170,33 @@
             }
 
             try {
-                supabase = supabase_js.createClient(url, key);
+                // Wait for Supabase library to load
+                if (typeof window.supabase === 'undefined') {
+                    log('⏳ Aguardando biblioteca Supabase...', 'warning');
+                    await waitForSupabase();
+                }
+
+                // Use the global supabase object
+                const { createClient } = window.supabase;
+                supabase = createClient(url, key);
                 log('✅ Credenciais configuradas com sucesso!', 'success');
                 log('🔗 Conectado ao Supabase', 'info');
             } catch (error) {
-                log(`❌ Erro ao criar cliente: ${error.message}`, 'error');
+                log(`❌ Erro: ${error.message}`, 'error');
+                console.error('Erro completo:', error);
             }
         }
 
-        function loadFromEnv() {
-            log('⚠️ Esta função precisa de acesso ao arquivo .env', 'warning');
-            log('📝 Copie manualmente as credenciais do arquivo .env', 'info');
+        async function loadFromEnv() {
+            log('🔄 Carregando credenciais...', 'info');
+
+            const url = 'https://wanrdteafvqtcivcrtfy.supabase.co';
+            const key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndhbnJkdGVhZnZxdGNpdmNydGZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjM1ODk1MjYsImV4cCI6MjAzOTE2NTUyNn0.Ji_C9y4YUzuD4desS-ln6AVsNY_rfWu4hcn4wu4Zb38';
+
+            document.getElementById('supabaseUrl').value = url;
+            document.getElementById('supabaseKey').value = key;
+
+            await saveCredentials();
         }
 
         async function runTest1() {

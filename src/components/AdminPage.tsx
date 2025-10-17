@@ -226,20 +226,9 @@ export function AdminPage() {
   const isAnyLoading = Object.values(isLoading).some(Boolean);
 
   // Filter out collection points with no data for the compact grid
-  console.log('All collection points data:', collectionPointsData.map(p => ({
-    id: p.id,
-    name: p.name,
-    hasGraphData: !!p.graphData,
-    datasetsLength: p.graphData?.datasets?.length,
-    error: p.error,
-    isLoading: p.isLoading
-  })));
-
   const validCollectionPoints = collectionPointsData.filter(
     pointData => pointData.graphData && !pointData.error && !pointData.isLoading
   );
-
-  console.log('Valid collection points:', validCollectionPoints.length);
 
   // Get selected client info for A4 report
   const selectedClientInfo = selectedClient ? clients.find(c => c.id === selectedClient) : null;
@@ -367,19 +356,9 @@ export function AdminPage() {
                 <div className="p-6">
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {collectionPointsData.map((pointData) => {
-                      console.log('Point data for', pointData.name, ':', {
-                        hasGraphData: !!pointData.graphData,
-                        datasetsLength: pointData.graphData?.datasets?.length || 0,
-                        error: pointData.error,
-                        isLoading: pointData.isLoading
-                      });
+                      const hasData = pointData.graphData.datasets.length>0 && !pointData.error && !pointData.isLoading;
 
-                      const hasData = pointData.graphData?.datasets?.length > 0 && !pointData.error && !pointData.isLoading;
-
-                      if (!hasData) {
-                        console.log('Skipping point', pointData.name, 'because hasData is false');
-                        return null;
-                      }
+                      if (!hasData) return null;
 
                       return (
                         <div

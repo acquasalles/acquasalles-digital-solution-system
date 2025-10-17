@@ -85,17 +85,21 @@ export function useAdminData() {
       try {
         const supabase = getSupabase();
         setIsLoading(prev => ({ ...prev, graph: true }));
-        
+
+        console.log('Fetching pontos for cliente_id:', selectedClient);
+
         const [pontosResult, tiposResult] = await Promise.all([
           supabase
             .from('ponto_de_coleta')
-            .select('id, nome')
+            .select('id, nome, area_de_trabalho_id')
             .eq('cliente_id', selectedClient),
           supabase
             .from('tipos_medicao')
             .select('id, nome')
             .neq('nome', 'Foto')
         ]);
+
+        console.log('Pontos result:', pontosResult);
 
         if (pontosResult.error) throw pontosResult.error;
         if (tiposResult.error) throw tiposResult.error;
@@ -142,6 +146,11 @@ export function useAdminData() {
 
     try {
       const supabase = getSupabase();
+
+      console.log('Generating chart for ponto:', pontoId, pontoName);
+      console.log('Date range:', startDate, 'to', endDate);
+      console.log('Cliente ID:', selectedClient);
+
       const { data, error } = await supabase
         .from('medicao')
         .select(`
@@ -170,7 +179,11 @@ export function useAdminData() {
         .lte('data_hora_medicao', endDate + 'T23:59:59')
         .order('data_hora_medicao', { ascending: true });
 
-      if (error) throw error;
+      console.log('Medicoes data for', pontoName, ':', data?.length || 0, 'measurements');
+      if (error) {
+        console.error('Error fetching medicoes for', pontoName, ':', error);
+        throw error;
+      }
 
       // Generate all dates in the interval
       const dateInterval = {

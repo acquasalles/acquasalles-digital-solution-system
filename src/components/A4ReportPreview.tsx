@@ -7,6 +7,7 @@ import { useIntl } from 'react-intl';
 import type { ReportData } from '../types/report';
 import { fetchWaterQualityData, generateComplianceAnalysis } from '../lib/waterQualityCompliance';
 import type { ComplianceAnalysis } from '../types/waterQuality';
+import { getSupabase } from '../lib/supabase';
 
 interface ClientInfo {
   name: string;
@@ -171,7 +172,7 @@ export function A4ReportPreview({
   React.useEffect(() => {
     const loadMeasurementLimits = async () => {
       try {
-        const supabase = require('../lib/supabase').getSupabase();
+        const supabase = getSupabase();
         const { data, error } = await supabase
           .from('tipos_medicao')
           .select('nome, valor_minimo, valor_maximo')
@@ -322,8 +323,6 @@ export function A4ReportPreview({
   // Process water quality data grouped by collection point
   const waterQualityPointsData = useMemo(() => {
     if (!realAnalysis || !clientId) return null;
-
-    const supabase = require('../lib/supabase').getSupabase();
 
     // Group samples by collection point
     const pointsMap = new Map<string, {

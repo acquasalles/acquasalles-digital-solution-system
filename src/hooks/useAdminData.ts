@@ -190,12 +190,15 @@ export function useAdminData() {
         start: parseISO(startDate),
         end: parseISO(endDate)
       };
-      
+
       const allDates = eachDayOfInterval(dateInterval)
         .map(date => format(date, 'dd/MM/yyyy'));
 
+      console.log('Date interval for', pontoName, ':', allDates.length, 'days');
+
       // If no data and no dates, show error
       if ((!data || data.length === 0) && allDates.length === 0) {
+        console.log('No data and no dates for', pontoName);
         return {
           ...initialData,
           isLoading: false,
@@ -203,10 +206,17 @@ export function useAdminData() {
         };
       }
 
+      // If no data but dates exist, still create chart with empty data
+      if (!data || data.length === 0) {
+        console.log('No measurement data for', pontoName, 'but dates exist. Creating empty chart.');
+      }
+
       // Get area name from the data
       const areaName = data && data.length > 0 && data[0].area_de_trabalho?.nome_area
         ? data[0].area_de_trabalho.nome_area
         : undefined;
+
+      console.log('Area name for', pontoName, ':', areaName);
       
       // Get outorga data from the first measurement's ponto_de_coleta
       const outorgaData = data && data.length > 0 && data[0].ponto_de_coleta?.outorga 
@@ -229,6 +239,8 @@ export function useAdminData() {
           });
         });
       }
+
+      console.log('Available types for', pontoName, ':', Array.from(availableTypes));
 
       // Create datasets - special handling for Registro (m3) to show daily differences
       const datasets = Array.from(availableTypes).sort().map((type) => {
@@ -504,7 +516,7 @@ export function useAdminData() {
         };
       }
 
-      return {
+      const result = {
         id: pontoId,
         name: pontoName,
         areaName: areaName,
@@ -517,8 +529,16 @@ export function useAdminData() {
         error: null
       };
 
+      console.log('Successfully generated chart for', pontoName, ':', {
+        datasets: chartData.datasets.length,
+        stats: stats.length,
+        hasOutorga: !!outorgaData
+      });
+
+      return result;
+
     } catch (error) {
-      console.error('Error generating chart for collection point:', error);
+      console.error('Error generating chart for collection point:', pontoName, error);
       return {
         ...initialData,
         outorga: null,
@@ -533,12 +553,23 @@ export function useAdminData() {
     setIsLoading(prev => ({ ...prev, graph: true }));
     setError(null);
 
+    console.log('Generating charts for', pontos.length, 'collection points');
+
     try {
-      const chartPromises = pontos.map(ponto => 
+      const chartPromises = pontos.map(ponto =>
         generateChartForCollectionPoint(ponto.id, ponto.nome)
       );
 
       const chartResults = await Promise.all(chartPromises);
+
+      console.log('Chart results:', chartResults.map(r => ({
+        id: r.id,
+        name: r.name,
+        hasGraphData: !!r.graphData,
+        datasetsLength: r.graphData?.datasets?.length || 0,
+        error: r.error
+      })));
+
       setCollectionPointsData(chartResults);
 
       // Set the first chart as the main one for backward compatibility

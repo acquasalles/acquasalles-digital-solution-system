@@ -200,7 +200,7 @@ export function useAdminData() {
         ? data[0].ponto_de_coleta.outorga 
         : null;
       
-      console.log('Outorga data for point:', pontoName, outorgaData);
+      //console.log('Outorga data for point:', pontoName, outorgaData);
       
       // Create chart title with area name
       const chartTitle = areaName ? `${areaName} - ${pontoName}` : pontoName;

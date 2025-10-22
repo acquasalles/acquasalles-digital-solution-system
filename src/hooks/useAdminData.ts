@@ -7,6 +7,56 @@ import type { Client } from '../types/client';
 import { formatData } from '../lib/formatData';
 import { getMeasurementColor } from '../constants/measurementColors';
 
+/**
+ * Interpolates Sunday volumes by redistributing Monday's accumulated volume.
+ *
+ * Sunday has no measurements in the database (volume = 0).
+ * Monday accumulates Sunday + Monday consumption.
+ * This function splits Monday's volume equally between Sunday and Monday.
+ *
+ * @param volumeData - Array of daily volume differences
+ * @param dateLabels - Array of date labels in 'dd/MM/yyyy' format
+ * @returns Array with interpolated Sunday volumes
+ *
+ * @example
+ * Input:  Saturday(20) → Sunday(0) → Monday(50)
+ * Output: Saturday(20) → Sunday(25) → Monday(25)
+ */
+function interpolateSundayVolumes(volumeData: number[], dateLabels: string[]): number[] {
+  const interpolatedData = [...volumeData];
+
+  for (let i = 0; i < dateLabels.length; i++) {
+    const date = dateLabels[i];
+    const [day, month, year] = date.split('/').map(Number);
+    const dateObj = new Date(year, month - 1, day);
+    const dayOfWeek = dateObj.getDay();
+
+    // Check if current day is Monday (1) and has volume > 0
+    if (dayOfWeek === 1 && interpolatedData[i] > 0) {
+      // Check if previous day is Sunday (0) with volume = 0
+      if (i > 0) {
+        const prevDate = dateLabels[i - 1];
+        const [prevDay, prevMonth, prevYear] = prevDate.split('/').map(Number);
+        const prevDateObj = new Date(prevYear, prevMonth - 1, prevDay);
+        const prevDayOfWeek = prevDateObj.getDay();
+
+        if (prevDayOfWeek === 0 && interpolatedData[i - 1] === 0) {
+          // Split Monday's volume equally between Sunday and Monday
+          const mondayVolume = interpolatedData[i];
+          const redistributedVolume = Number((mondayVolume / 2).toFixed(2));
+
+          interpolatedData[i - 1] = redistributedVolume; // Sunday
+          interpolatedData[i] = redistributedVolume;     // Monday
+
+          console.log(`Interpolated Sunday ${prevDate}: ${redistributedVolume}m³ (from Monday ${date}: ${mondayVolume}m³)`);
+        }
+      }
+    }
+  }
+
+  return interpolatedData;
+}
+
 interface CollectionPointData {
   id: string;
   name: string;
@@ -257,23 +307,28 @@ export function useAdminData() {
           });
           
           console.log('Filled accumulated values:', filledValues);
-          
+
           // Calculate daily differences
           typeData = filledValues.map((currentValue, index) => {
             if (index === 0 || currentValue === null) {
               return 0; // First day or no data
             }
-            
+
             const previousValue = filledValues[index - 1];
             if (previousValue === null) {
               return 0;
             }
-            
+
             const difference = currentValue - previousValue;
             return Number(Math.max(0, difference).toFixed(2)); // Ensure non-negative
           });
-          
-          console.log('Daily differences calculated:', typeData);
+
+          console.log('Daily differences calculated (before interpolation):', typeData);
+
+          // Apply Sunday interpolation
+          typeData = interpolateSundayVolumes(typeData, allDates);
+
+          console.log('Daily differences calculated (after Sunday interpolation):', typeData);
         } else {
           // Standard handling for other measurement types (average per day)
           typeData = allDates.map(date => {

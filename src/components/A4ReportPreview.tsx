@@ -117,6 +117,7 @@ export function A4ReportPreview({
         max: number;
         avg: number;
         unit: string;
+        range?: { min: number; max: number };
       }> = [];
 
       // Process each parameter (pH, Cloro, Turbidez)
@@ -135,7 +136,8 @@ export function A4ReportPreview({
           min: paramStat.min,
           max: paramStat.max,
           avg: paramStat.avg,
-          unit: paramName === 'pH' ? '' : paramName === 'Cloro' ? 'mg/L' : 'NTU'
+          unit: paramName === 'pH' ? '' : paramName === 'Cloro' ? 'mg/L' : 'NTU',
+          range: paramStat.range
         });
       });
 
@@ -1049,18 +1051,37 @@ export function A4ReportPreview({
                               {/* Visual Bar Chart */}
                               <div className="bg-white p-2 rounded border border-gray-200">
                                 <div className="relative h-16 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-1 border border-gray-200">
-                                  {/* Reference line for pH = 7 */}
-                                  {param.label === 'pH' && maxValue > 0 && (
-                                    <div
-                                      className="absolute left-1 right-1 border-t border-dashed border-blue-400 z-10 pointer-events-none"
-                                      style={{
-                                        bottom: `${(7 / maxValue * 56) + 4}px`
-                                      }}
-                                    >
-                                      <span className="absolute -right-1 -top-2 text-[9px] text-blue-600 font-medium bg-blue-50 px-1 py-0.5 rounded">
-                                        pH 7
-                                      </span>
-                                    </div>
+                                  {/* Conformity Range Lines (Min and Max) */}
+                                  {param.range && maxValue > 0 && (
+                                    <>
+                                      {/* Minimum conformity line */}
+                                      {param.range.min > 0 && (
+                                        <div
+                                          className="absolute left-1 right-1 border-t-2 border-dashed border-green-500 z-10 pointer-events-none"
+                                          style={{
+                                            bottom: `${Math.min((param.range.min / maxValue * 56) + 4, 60)}px`
+                                          }}
+                                        >
+                                          <span className="absolute -left-1 -top-2.5 text-[8px] text-green-700 font-semibold bg-green-50 px-1 py-0.5 rounded border border-green-200 whitespace-nowrap">
+                                            Min: {param.range.min}{param.unit}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Maximum conformity line */}
+                                      {param.range.max > 0 && (
+                                        <div
+                                          className="absolute left-1 right-1 border-t-2 border-dashed border-red-500 z-10 pointer-events-none"
+                                          style={{
+                                            bottom: `${Math.min((param.range.max / maxValue * 56) + 4, 60)}px`
+                                          }}
+                                        >
+                                          <span className="absolute -right-1 -top-2.5 text-[8px] text-red-700 font-semibold bg-red-50 px-1 py-0.5 rounded border border-red-200 whitespace-nowrap">
+                                            Max: {param.range.max}{param.unit}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </>
                                   )}
 
                                   {/* Bars */}

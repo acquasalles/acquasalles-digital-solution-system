@@ -71,6 +71,10 @@ interface CollectionPointData {
     total?: number;
     color: string;
     hidden: boolean;
+    range?: {
+      min: number;
+      max: number;
+    };
   }>;
   outorga?: {
     volumeMax?: {
@@ -94,7 +98,8 @@ export function useAdminData() {
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [pontosList, setPontosList] = useState<Array<{ id: string; nome: string }>>([]);
   const [collectionPointsData, setCollectionPointsData] = useState<CollectionPointData[]>([]);
-  const [medicaoTypes, setMedicaoTypes] = useState<Array<{ id: string; nome: string }>>([]);
+  const [medicaoTypes, setMedicaoTypes] = useState<Array<{ id: string; nome: string; range?: { min: number; max: number } }>>([]);
+  const [medicaoTypeRanges, setMedicaoTypeRanges] = useState<Map<string, { min: number; max: number }>>(new Map());
   const [availableMedicaoTypes, setAvailableMedicaoTypes] = useState<Set<string>>(new Set());
   const [visibleMedicaoTypes, setVisibleMedicaoTypes] = useState<Set<string>>(new Set(['pH']));
   const [graphData, setGraphData] = useState<any>(null);
@@ -143,7 +148,7 @@ export function useAdminData() {
             .eq('cliente_id', selectedClient),
           supabase
             .from('tipos_medicao')
-            .select('id, nome')
+            .select('id, nome, range')
             .neq('nome', 'Foto')
         ]);
 
@@ -152,6 +157,17 @@ export function useAdminData() {
 
         setPontosList(pontosResult.data || []);
         setMedicaoTypes(tiposResult.data || []);
+
+        // Build range map for quick lookup
+        const rangeMap = new Map<string, { min: number; max: number }>();
+        tiposResult.data?.forEach(tipo => {
+          if (tipo.range) {
+            rangeMap.set(tipo.nome, tipo.range);
+          }
+        });
+        setMedicaoTypeRanges(rangeMap);
+
+        console.log('Loaded measurement type ranges:', Object.fromEntries(rangeMap));
 
         if (pontosResult.data && pontosResult.data.length > 0) {
           setSelectedPonto(pontosResult.data[0].id);
@@ -397,19 +413,23 @@ export function useAdminData() {
           }
           return true;
         })
-        .map(dataset => ({
-        label: dataset.label,
-        min: Math.min(...dataset.data.filter(v => v !== 0)) || 0,
-        max: Math.max(...dataset.data) || 0,
-        avg: dataset.data.some(v => v !== 0)
-          ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
-          : 0,
-        total: (dataset.label === 'Volume' || dataset.label === 'Registro (m3)')
-          ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
-          : undefined,
-        color: dataset.borderColor,
-        hidden: dataset.hidden
-      }));
+        .map(dataset => {
+          const range = medicaoTypeRanges.get(dataset.label);
+          return {
+            label: dataset.label,
+            min: Math.min(...dataset.data.filter(v => v !== 0)) || 0,
+            max: Math.max(...dataset.data) || 0,
+            avg: dataset.data.some(v => v !== 0)
+              ? Number((dataset.data.reduce((a, b) => a + b, 0) / dataset.data.filter(v => v !== 0).length).toFixed(2))
+              : 0,
+            total: (dataset.label === 'Volume' || dataset.label === 'Registro (m3)')
+              ? Number(dataset.data.reduce((a, b) => a + b, 0).toFixed(2))
+              : undefined,
+            color: dataset.borderColor,
+            hidden: dataset.hidden,
+            range: range || undefined
+          };
+        });
 
       const chartData = {
         labels: allDates,

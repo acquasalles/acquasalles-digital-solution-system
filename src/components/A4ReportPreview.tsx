@@ -92,6 +92,75 @@ export function A4ReportPreview({
   const reportRef = useRef<HTMLDivElement>(null);
   const intl = useIntl();
 
+  // Process water quality data for collection points (pH, Chlorine, Turbidity)
+  const waterQualityData = useMemo(() => {
+    const pointsWithWaterQuality = collectionPointsData.filter(point => {
+      return point.datasetStats.some(stat =>
+        (stat.label === 'pH' || stat.label === 'Cloro' || stat.label === 'Turbidez') && !stat.hidden
+      );
+    });
+
+    if (pointsWithWaterQuality.length === 0) return null;
+
+    console.log('Water Quality Points with ranges:', pointsWithWaterQuality.map(p => ({
+      name: p.name,
+      stats: p.datasetStats.map(s => ({ label: s.label, range: s.range }))
+    })));
+
+    // Generate all dates in the interval
+    const allDates = eachDayOfInterval({
+      start: reportPeriod.start,
+      end: reportPeriod.end
+    });
+
+    const processedPoints = pointsWithWaterQuality.map(point => {
+      const parameters: Array<{
+        label: string;
+        data: number[];
+        color: string;
+        min: number;
+        max: number;
+        avg: number;
+        unit: string;
+        range?: { min: number; max: number };
+      }> = [];
+
+      // Process each parameter (pH, Cloro, Turbidez)
+      ['pH', 'Cloro', 'Turbidez'].forEach(paramName => {
+        const paramStat = point.datasetStats.find(stat => stat.label === paramName);
+        if (!paramStat || paramStat.hidden) return;
+
+        const dailyData = point.graphData?.datasets?.find((ds: any) => ds.label === paramName)?.data || [];
+
+        const validValues = dailyData.filter((v: number) => v > 0);
+
+        parameters.push({
+          label: paramName,
+          data: dailyData,
+          color: paramStat.color,
+          min: paramStat.min,
+          max: paramStat.max,
+          avg: paramStat.avg,
+          unit: paramName === 'pH' ? '' : paramName === 'Cloro' ? 'mg/L' : 'NTU',
+          range: paramStat.range
+        });
+      });
+
+      return {
+        id: point.id,
+        name: point.name,
+        areaName: point.areaName,
+        parameters,
+        allDates: allDates.map(date => format(date, 'dd/MM/yyyy'))
+      };
+    });
+
+    return {
+      points: processedPoints.filter(p => p.parameters.length > 0),
+      totalPoints: processedPoints.filter(p => p.parameters.length > 0).length
+    };
+  }, [collectionPointsData, reportPeriod]);
+
   // Process volume data for collection points
   const volumeData = useMemo(() => {
     const pointsWithVolume = collectionPointsData.filter(point => {
@@ -289,16 +358,27 @@ export function A4ReportPreview({
     }
   };
 
-  // Calculate total pages: Summary + Volume pages (if exists) + Table page (if reportData exists)
+  // Calculate total pages: Summary + Volume pages + Water Quality pages + Table page
   const volumePointsPerPage = 4;
+  const waterQualityPointsPerPage = 4;
   const totalVolumePages = volumeData ? Math.ceil(volumeData.points.length / volumePointsPerPage) : 0;
-  const totalPages = 1 + totalVolumePages + (reportData ? 1 : 0);
+  const totalWaterQualityPages = waterQualityData ? Math.ceil(waterQualityData.points.length / waterQualityPointsPerPage) : 0;
+  const totalPages = 1 + totalVolumePages + totalWaterQualityPages + (reportData ? 1 : 0);
 
   const getCurrentVolumePoints = () => {
     if (!volumeData || currentPage <= 1 || currentPage > 1 + totalVolumePages) return [];
     const pageIndex = currentPage - 2;
     const startIndex = pageIndex * volumePointsPerPage;
     return volumeData.points.slice(startIndex, startIndex + volumePointsPerPage);
+  };
+
+  const getCurrentWaterQualityPoints = () => {
+    if (!waterQualityData) return [];
+    const waterQualityStartPage = 1 + totalVolumePages + 1;
+    if (currentPage < waterQualityStartPage || currentPage >= waterQualityStartPage + totalWaterQualityPages) return [];
+    const pageIndex = currentPage - waterQualityStartPage;
+    const startIndex = pageIndex * waterQualityPointsPerPage;
+    return waterQualityData.points.slice(startIndex, startIndex + waterQualityPointsPerPage);
   };
 
   // Generate table data from reportData with improved merged columns logic
@@ -912,6 +992,173 @@ export function A4ReportPreview({
               </div>
             </div>
           )}
+
+          {/* Water Quality Report Pages */}
+          {(() => {
+            const waterQualityStartPage = 1 + totalVolumePages + 1;
+            const isWaterQualityPage = currentPage >= waterQualityStartPage && currentPage < waterQualityStartPage + totalWaterQualityPages;
+
+            if (!isWaterQualityPage || !waterQualityData) return null;
+
+            const currentPoints = getCurrentWaterQualityPoints();
+
+            return (
+              <div className="h-full flex flex-col" data-page={currentPage}>
+                {/* Page Header */}
+                <div className="border-b-2 border-teal-600 pb-1 mb-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900 mb-0 flex items-center">
+                        <TrendingUp className="h-5 w-5 mr-2" />
+                        Relatório de Qualidade da Água
+                      </h2>
+                      <p className="text-gray-600 text-sm">
+                        Análise de parâmetros físico-químicos - pH, Cloro Residual e Turbidez
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-600">Período</div>
+                      <div className="text-sm font-semibold">{format(reportPeriod.start, 'dd/MM/yyyy')} - {format(reportPeriod.end, 'dd/MM/yyyy')}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Water Quality Points Grid - 2 columns */}
+                <div className="flex-1 grid grid-cols-2 gap-3">
+                  {currentPoints.map((point) => {
+                    return (
+                      <div key={point.id} className="bg-gray-50 p-2 rounded-lg border-2 border-teal-200 flex flex-col">
+                        {/* Point Header */}
+                        <div className="mb-2">
+                          <h3 className="font-bold text-gray-900 text-sm leading-tight">{point.name}</h3>
+                          {point.areaName && (
+                            <p className="text-xs text-gray-600 leading-tight">{point.areaName}</p>
+                          )}
+                        </div>
+
+                        {/* Parameters Charts */}
+                        {point.parameters.map((param) => {
+                          // Calculate max value including range limits for proper scaling
+                          const dataMax = Math.max(...param.data.filter((v: number) => v > 0), 0);
+                          const rangeMax = param.range?.max || 0;
+                          const maxValue = Math.max(dataMax, rangeMax);
+                          const validData = param.data.filter((v: number) => v > 0);
+
+                          console.log(`${param.label} - dataMax: ${dataMax}, rangeMax: ${rangeMax}, final maxValue: ${maxValue}, has range:`, !!param.range);
+
+                          return (
+                            <div key={param.label} className="mb-2">
+                              {/* Parameter Header */}
+                              <div className="flex items-center justify-between mb-1">
+                                <h4 className="font-semibold text-xs" style={{ color: param.color }}>
+                                  {param.label}
+                                </h4>
+                                <span className="text-xs text-gray-600">
+                                  Média: <strong>{param.avg.toFixed(2)}{param.unit}</strong>
+                                </span>
+                              </div>
+
+                              {/* Visual Bar Chart */}
+                              <div className="bg-white p-2 rounded border border-gray-200">
+                                <div className="relative h-16 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-1 border border-gray-200">
+                                  {/* Conformity Range Lines (Min and Max) */}
+                                  {param.range && maxValue > 0 && (
+                                    <>
+                                      {/* Minimum conformity line */}
+                                      {param.range.min >= 0 && (
+                                        <div
+                                          className="absolute left-1 right-1 border-t-2 border-dashed border-green-600 z-20 pointer-events-none"
+                                          style={{
+                                            bottom: `${(param.range.min / maxValue * 56) + 4}px`
+                                          }}
+                                        >
+                                          <span className="absolute left-0 -top-2.5 text-[8px] text-green-800 font-bold bg-green-100 px-1.5 py-0.5 rounded border border-green-300 whitespace-nowrap shadow-sm">
+                                            Min: {param.range.min.toFixed(1)}{param.unit}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {/* Maximum conformity line */}
+                                      {param.range.max > 0 && (
+                                        <div
+                                          className="absolute left-1 right-1 border-t-2 border-dashed border-red-600 z-20 pointer-events-none"
+                                          style={{
+                                            bottom: `${(param.range.max / maxValue * 56) + 4}px`
+                                          }}
+                                        >
+                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-800 font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                            Max: {param.range.max.toFixed(1)}{param.unit}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+
+                                  {/* Bars */}
+                                  {param.data.slice(0, 30).map((value: number, idx: number) => {
+                                    if (value === 0) return <div key={idx} className="flex-1 min-w-[2px]" />;
+
+                                    const heightPx = maxValue > 0 ? (value / maxValue * 56) : 0;
+                                    const finalHeight = heightPx > 0 ? Math.max(heightPx, 4) : 0;
+
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="flex-1 relative group min-w-[2px]"
+                                        style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}
+                                      >
+                                        <div
+                                          className="w-full rounded-t transition-all cursor-pointer"
+                                          style={{
+                                            height: `${finalHeight}px`,
+                                            minHeight: finalHeight > 0 ? '4px' : '0px',
+                                            backgroundColor: param.color,
+                                            opacity: 0.8
+                                          }}
+                                          title={`${point.allDates[idx]}: ${value.toFixed(2)}${param.unit}`}
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+
+                              {/* Statistics */}
+                              <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
+                                <div className="bg-white p-1 rounded border border-gray-200">
+                                  <div className="text-gray-600 text-[9px]">Mín</div>
+                                  <div className="font-bold" style={{ color: param.color }}>
+                                    {param.min.toFixed(2)}{param.unit}
+                                  </div>
+                                </div>
+                                <div className="bg-white p-1 rounded border border-gray-200">
+                                  <div className="text-gray-600 text-[9px]">Média</div>
+                                  <div className="font-bold" style={{ color: param.color }}>
+                                    {param.avg.toFixed(2)}{param.unit}
+                                  </div>
+                                </div>
+                                <div className="bg-white p-1 rounded border border-gray-200">
+                                  <div className="text-gray-600 text-[9px]">Máx</div>
+                                  <div className="font-bold" style={{ color: param.color }}>
+                                    {param.max.toFixed(2)}{param.unit}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Footer */}
+                <div className="mt-auto pt-3 border-t border-gray-200 text-center text-xs text-gray-500">
+                  <p>Página {currentPage} de {totalPages} | Relatório de Qualidade da Água</p>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Table Page - Optimized for 30 rows without scrolling */}
           {currentPage === totalPages && generateTableData && (

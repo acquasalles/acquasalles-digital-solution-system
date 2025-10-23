@@ -102,6 +102,11 @@ export function A4ReportPreview({
 
     if (pointsWithWaterQuality.length === 0) return null;
 
+    console.log('Water Quality Points with ranges:', pointsWithWaterQuality.map(p => ({
+      name: p.name,
+      stats: p.datasetStats.map(s => ({ label: s.label, range: s.range }))
+    })));
+
     // Generate all dates in the interval
     const allDates = eachDayOfInterval({
       start: reportPeriod.start,
@@ -1033,8 +1038,13 @@ export function A4ReportPreview({
 
                         {/* Parameters Charts */}
                         {point.parameters.map((param) => {
-                          const maxValue = Math.max(...param.data.filter((v: number) => v > 0));
+                          // Calculate max value including range limits for proper scaling
+                          const dataMax = Math.max(...param.data.filter((v: number) => v > 0), 0);
+                          const rangeMax = param.range?.max || 0;
+                          const maxValue = Math.max(dataMax, rangeMax);
                           const validData = param.data.filter((v: number) => v > 0);
+
+                          console.log(`${param.label} - dataMax: ${dataMax}, rangeMax: ${rangeMax}, final maxValue: ${maxValue}, has range:`, !!param.range);
 
                           return (
                             <div key={param.label} className="mb-2">
@@ -1055,15 +1065,15 @@ export function A4ReportPreview({
                                   {param.range && maxValue > 0 && (
                                     <>
                                       {/* Minimum conformity line */}
-                                      {param.range.min > 0 && (
+                                      {param.range.min >= 0 && (
                                         <div
-                                          className="absolute left-1 right-1 border-t-2 border-dashed border-green-500 z-10 pointer-events-none"
+                                          className="absolute left-1 right-1 border-t-2 border-dashed border-green-600 z-20 pointer-events-none"
                                           style={{
-                                            bottom: `${Math.min((param.range.min / maxValue * 56) + 4, 60)}px`
+                                            bottom: `${(param.range.min / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute -left-1 -top-2.5 text-[8px] text-green-700 font-semibold bg-green-50 px-1 py-0.5 rounded border border-green-200 whitespace-nowrap">
-                                            Min: {param.range.min}{param.unit}
+                                          <span className="absolute left-0 -top-2.5 text-[8px] text-green-800 font-bold bg-green-100 px-1.5 py-0.5 rounded border border-green-300 whitespace-nowrap shadow-sm">
+                                            Min: {param.range.min.toFixed(1)}{param.unit}
                                           </span>
                                         </div>
                                       )}
@@ -1071,13 +1081,13 @@ export function A4ReportPreview({
                                       {/* Maximum conformity line */}
                                       {param.range.max > 0 && (
                                         <div
-                                          className="absolute left-1 right-1 border-t-2 border-dashed border-red-500 z-10 pointer-events-none"
+                                          className="absolute left-1 right-1 border-t-2 border-dashed border-red-600 z-20 pointer-events-none"
                                           style={{
-                                            bottom: `${Math.min((param.range.max / maxValue * 56) + 4, 60)}px`
+                                            bottom: `${(param.range.max / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute -right-1 -top-2.5 text-[8px] text-red-700 font-semibold bg-red-50 px-1 py-0.5 rounded border border-red-200 whitespace-nowrap">
-                                            Max: {param.range.max}{param.unit}
+                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-800 font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                            Max: {param.range.max.toFixed(1)}{param.unit}
                                           </span>
                                         </div>
                                       )}

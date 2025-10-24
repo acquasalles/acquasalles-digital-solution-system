@@ -1058,7 +1058,7 @@ export function A4ReportPreview({
 
                               {/* Visual Bar Chart */}
                               <div className="bg-white p-2 rounded border border-gray-200">
-                                <div className="relative h-16 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-1 border border-gray-200">
+                                <div className="relative h-20 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-1 border border-gray-200 pt-6">
                                   {/* Conformity Range Lines (Min and Max) */}
                                   {param.range && maxValue > 0 && (
                                     <>
@@ -1070,8 +1070,8 @@ export function A4ReportPreview({
                                             bottom: `${(param.range.min / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute left-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
-                                            Min: {param.range.min.toFixed(1)}
+                                          <span className="absolute left-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                            Min: {param.range.min.toFixed(1)}{param.unit}
                                           </span>
                                         </div>
                                       )}
@@ -1084,8 +1084,8 @@ export function A4ReportPreview({
                                             bottom: `${(param.range.max / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
-                                            Max: {param.range.max.toFixed(1)}
+                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                            Max: {param.range.max.toFixed(1)}{param.unit}
                                           </span>
                                         </div>
                                       )}
@@ -1099,36 +1099,29 @@ export function A4ReportPreview({
                                     const heightPx = maxValue > 0 ? (value / maxValue * 56) : 0;
                                     const finalHeight = heightPx > 0 ? Math.max(heightPx, 4) : 0;
 
-                                    // Determine if we should show the label
-                                    // Show labels for: first, last, max, min, and every 5th bar
-                                    const showLabel = idx === 0 ||
-                                                     idx === param.data.slice(0, 30).filter(v => v > 0).length - 1 ||
-                                                     value === Math.max(...param.data.slice(0, 30)) ||
-                                                     value === Math.min(...param.data.slice(0, 30).filter(v => v > 0)) ||
-                                                     idx % 5 === 0;
-
                                     return (
                                       <div
                                         key={idx}
                                         className="flex-1 relative group min-w-[2px]"
                                         style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}
                                       >
-                                        {/* Data label on hover or for key values */}
-                                        {showLabel && (
-                                          <div
-                                            className="absolute -top-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none"
+                                        {/* Data label always visible */}
+                                        <div
+                                          className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+                                          style={{
+                                            bottom: `${finalHeight + 2}px`
+                                          }}
+                                        >
+                                          <span
+                                            className="text-[6px] font-semibold px-0.5 py-0.5 rounded whitespace-nowrap"
+                                            style={{
+                                              backgroundColor: param.color,
+                                              color: 'white'
+                                            }}
                                           >
-                                            <span
-                                              className="text-[7px] font-bold px-1 py-0.5 rounded whitespace-nowrap shadow-sm"
-                                              style={{
-                                                backgroundColor: param.color,
-                                                color: 'white'
-                                              }}
-                                            >
-                                              {value.toFixed(1)}{param.unit}
-                                            </span>
-                                          </div>
-                                        )}
+                                            {value.toFixed(1)}
+                                          </span>
+                                        </div>
                                         <div
                                           className="w-full rounded-t transition-all cursor-pointer"
                                           style={{

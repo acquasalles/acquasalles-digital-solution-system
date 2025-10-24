@@ -1058,7 +1058,7 @@ export function A4ReportPreview({
 
                               {/* Visual Bar Chart */}
                               <div className="bg-white p-2 rounded border border-gray-200">
-                                <div className="relative h-20 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-1 border border-gray-200 pt-6">
+                                <div className="relative h-16 flex items-end gap-1 bg-gradient-to-t from-gray-100 to-gray-50 rounded-md p-1 border border-gray-200">
                                   {/* Conformity Range Lines (Min and Max) */}
                                   {param.range && maxValue > 0 && (
                                     <>
@@ -1105,25 +1105,8 @@ export function A4ReportPreview({
                                         className="flex-1 relative group min-w-[2px]"
                                         style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}
                                       >
-                                        {/* Data label always visible */}
                                         <div
-                                          className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none"
-                                          style={{
-                                            bottom: `${finalHeight + 2}px`
-                                          }}
-                                        >
-                                          <span
-                                            className="text-[6px] font-semibold px-0.5 py-0.5 rounded whitespace-nowrap"
-                                            style={{
-                                              backgroundColor: param.color,
-                                              color: 'white'
-                                            }}
-                                          >
-                                            {value.toFixed(1)}
-                                          </span>
-                                        </div>
-                                        <div
-                                          className="w-full rounded-t transition-all cursor-pointer"
+                                          className="w-full rounded-t transition-all cursor-pointer relative flex items-center justify-center"
                                           style={{
                                             height: `${finalHeight}px`,
                                             minHeight: finalHeight > 0 ? '4px' : '0px',
@@ -1131,7 +1114,20 @@ export function A4ReportPreview({
                                             opacity: 0.8
                                           }}
                                           title={`${point.allDates[idx]}: ${value.toFixed(2)}${param.unit}`}
-                                        />
+                                        >
+                                          {/* Data label inside bar */}
+                                          {finalHeight > 12 && (
+                                            <span
+                                              className="text-[6px] font-bold whitespace-nowrap"
+                                              style={{
+                                                color: 'white',
+                                                textShadow: '0 0 2px rgba(0,0,0,0.5)'
+                                              }}
+                                            >
+                                              {value.toFixed(1)}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     );
                                   })}

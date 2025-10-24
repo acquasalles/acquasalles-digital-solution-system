@@ -1120,7 +1120,7 @@ export function A4ReportPreview({
                                             <span
                                               className="text-[6px] font-bold whitespace-nowrap"
                                               style={{
-                                                color: 'white',
+                                                color: 'black',
                                                 textShadow: '0 0 2px rgba(0,0,0,0.5)'
                                               }}
                                             >

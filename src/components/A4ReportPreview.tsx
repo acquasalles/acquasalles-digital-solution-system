@@ -1072,7 +1072,7 @@ export function A4ReportPreview({
                                             bottom: `${(param.range.min / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute left-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                          <span className="absolute left-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
                                             Min: {param.range.min.toFixed(1)}{param.unit}
                                           </span>
                                         </div>

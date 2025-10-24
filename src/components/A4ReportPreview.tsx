@@ -1050,7 +1050,7 @@ export function A4ReportPreview({
                             <div key={param.label} className="mb-2">
                               {/* Parameter Header */}
                               <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-semibold text-xs px-4 py-1  text-white rounded-full" style={{ 'background-color': param.color }}>
+                                <h4 className="font-semibold text-xs px-4   text-white rounded-full" style={{ 'background-color': param.color }}>
                                   {param.label}
                                 </h4>
                                 <span className="text-xs text-gray-600">

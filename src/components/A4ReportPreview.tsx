@@ -1084,7 +1084,7 @@ export function A4ReportPreview({
                                             bottom: `${(param.range.max / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
                                             Max: {param.range.max.toFixed(1)}
                                           </span>
                                         </div>

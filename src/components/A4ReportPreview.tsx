@@ -1073,7 +1073,7 @@ export function A4ReportPreview({
                                           }}
                                         >
                                           <span className="absolute left-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
-                                            Min: {param.range.min.toFixed(1)}{param.unit}
+                                            Min: {param.range.min.toFixed(1)}
                                           </span>
                                         </div>
                                       )}

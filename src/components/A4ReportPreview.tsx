@@ -1099,12 +1099,36 @@ export function A4ReportPreview({
                                     const heightPx = maxValue > 0 ? (value / maxValue * 56) : 0;
                                     const finalHeight = heightPx > 0 ? Math.max(heightPx, 4) : 0;
 
+                                    // Determine if we should show the label
+                                    // Show labels for: first, last, max, min, and every 5th bar
+                                    const showLabel = idx === 0 ||
+                                                     idx === param.data.slice(0, 30).filter(v => v > 0).length - 1 ||
+                                                     value === Math.max(...param.data.slice(0, 30)) ||
+                                                     value === Math.min(...param.data.slice(0, 30).filter(v => v > 0)) ||
+                                                     idx % 5 === 0;
+
                                     return (
                                       <div
                                         key={idx}
                                         className="flex-1 relative group min-w-[2px]"
                                         style={{ height: '100%', display: 'flex', alignItems: 'flex-end' }}
                                       >
+                                        {/* Data label on hover or for key values */}
+                                        {showLabel && (
+                                          <div
+                                            className="absolute -top-5 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity z-30 pointer-events-none"
+                                          >
+                                            <span
+                                              className="text-[7px] font-bold px-1 py-0.5 rounded whitespace-nowrap shadow-sm"
+                                              style={{
+                                                backgroundColor: param.color,
+                                                color: 'white'
+                                              }}
+                                            >
+                                              {value.toFixed(1)}{param.unit}
+                                            </span>
+                                          </div>
+                                        )}
                                         <div
                                           className="w-full rounded-t transition-all cursor-pointer"
                                           style={{

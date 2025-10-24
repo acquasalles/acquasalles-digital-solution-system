@@ -1127,7 +1127,7 @@ export function A4ReportPreview({
                               <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
                                 <div className="bg-white p-1 rounded border border-gray-200">
                                   <div className="text-gray-600 text-[9px]">Mín</div>
-                                  <div className="font-bold" style={{ color: param.color }}>
+                                  <div className="font-bold" style={{ color: '#333333' }}>
                                     {param.min.toFixed(2)}{param.unit}
                                   </div>
                                 </div>

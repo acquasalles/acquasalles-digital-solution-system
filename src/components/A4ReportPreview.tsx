@@ -1050,12 +1050,10 @@ export function A4ReportPreview({
                             <div key={param.label} className="mb-2">
                               {/* Parameter Header */}
                               <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-semibold text-xs" style={{ color: param.color }}>
+                                <h4 className="font-semibold text-xs px-4   text-white rounded-full" style={{ 'background-color': param.color }}>
                                   {param.label}
                                 </h4>
-                                <span className="text-xs text-gray-600">
-                                  Média: <strong>{param.avg.toFixed(2)}{param.unit}</strong>
-                                </span>
+                                
                               </div>
 
                               {/* Visual Bar Chart */}
@@ -1067,13 +1065,13 @@ export function A4ReportPreview({
                                       {/* Minimum conformity line */}
                                       {param.range.min >= 0 && (
                                         <div
-                                          className="absolute left-1 right-1 border-t-2 border-dashed border-green-600 z-20 pointer-events-none"
+                                          className="absolute left-1 right-1 border-t border-dashed border-red-500 z-20 pointer-events-none"
                                           style={{
                                             bottom: `${(param.range.min / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute left-0 -top-2.5 text-[8px] text-green-800 font-bold bg-green-100 px-1.5 py-0.5 rounded border border-green-300 whitespace-nowrap shadow-sm">
-                                            Min: {param.range.min.toFixed(1)}{param.unit}
+                                          <span className="absolute left-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                            Min: {param.range.min.toFixed(1)}
                                           </span>
                                         </div>
                                       )}
@@ -1081,13 +1079,13 @@ export function A4ReportPreview({
                                       {/* Maximum conformity line */}
                                       {param.range.max > 0 && (
                                         <div
-                                          className="absolute left-1 right-1 border-t-2 border-dashed border-red-600 z-20 pointer-events-none"
+                                          className="absolute left-1 right-1 border-t border-dashed border-red-500 z-20 pointer-events-none"
                                           style={{
                                             bottom: `${(param.range.max / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-800 font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
-                                            Max: {param.range.max.toFixed(1)}{param.unit}
+                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                            Max: {param.range.max.toFixed(1)}
                                           </span>
                                         </div>
                                       )}
@@ -1127,19 +1125,20 @@ export function A4ReportPreview({
                               <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
                                 <div className="bg-white p-1 rounded border border-gray-200">
                                   <div className="text-gray-600 text-[9px]">Mín</div>
-                                  <div className="font-bold" style={{ color: param.color }}>
+                                  <div className="font-bold" style={{ color: '#333333' }}>
                                     {param.min.toFixed(2)}{param.unit}
                                   </div>
+                                  
                                 </div>
                                 <div className="bg-white p-1 rounded border border-gray-200">
                                   <div className="text-gray-600 text-[9px]">Média</div>
-                                  <div className="font-bold" style={{ color: param.color }}>
+                                  <div className="font-bold" style={{ color: '#333333' }}>
                                     {param.avg.toFixed(2)}{param.unit}
                                   </div>
                                 </div>
                                 <div className="bg-white p-1 rounded border border-gray-200">
                                   <div className="text-gray-600 text-[9px]">Máx</div>
-                                  <div className="font-bold" style={{ color: param.color }}>
+                                  <div className="font-bold" style={{ color: '#333333' }}>
                                     {param.max.toFixed(2)}{param.unit}
                                   </div>
                                 </div>

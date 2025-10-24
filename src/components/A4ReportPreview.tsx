@@ -1067,12 +1067,12 @@ export function A4ReportPreview({
                                       {/* Minimum conformity line */}
                                       {param.range.min >= 0 && (
                                         <div
-                                          className="absolute left-1 right-1 border-t-2 border-dashed border-green-600 z-20 pointer-events-none"
+                                          className="absolute left-1 right-1 border-t border-dashed border-red-500 z-20 pointer-events-none"
                                           style={{
                                             bottom: `${(param.range.min / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute left-0 -top-2.5 text-[8px] text-green-800 font-bold bg-green-100 px-1.5 py-0.5 rounded border border-green-300 whitespace-nowrap shadow-sm">
+                                          <span className="absolute left-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
                                             Min: {param.range.min.toFixed(1)}{param.unit}
                                           </span>
                                         </div>
@@ -1081,12 +1081,12 @@ export function A4ReportPreview({
                                       {/* Maximum conformity line */}
                                       {param.range.max > 0 && (
                                         <div
-                                          className="absolute left-1 right-1 border-t-2 border-dashed border-red-600 z-20 pointer-events-none"
+                                          className="absolute left-1 right-1 border-t border-dashed border-red-500 z-20 pointer-events-none"
                                           style={{
                                             bottom: `${(param.range.max / maxValue * 56) + 4}px`
                                           }}
                                         >
-                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-800 font-bold bg-red-100 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
+                                          <span className="absolute right-0 -top-2.5 text-[8px] text-red-700 font-bold bg-red-50 px-1.5 py-0.5 rounded border border-red-300 whitespace-nowrap shadow-sm">
                                             Max: {param.range.max.toFixed(1)}{param.unit}
                                           </span>
                                         </div>

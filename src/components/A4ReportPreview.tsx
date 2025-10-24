@@ -1133,13 +1133,13 @@ export function A4ReportPreview({
                                 </div>
                                 <div className="bg-white p-1 rounded border border-gray-200">
                                   <div className="text-gray-600 text-[9px]">Média</div>
-                                  <div className="font-bold" style={{ color: param.color }}>
+                                  <div className="font-bold" style={{ color: '#333333' }}>
                                     {param.avg.toFixed(2)}{param.unit}
                                   </div>
                                 </div>
                                 <div className="bg-white p-1 rounded border border-gray-200">
                                   <div className="text-gray-600 text-[9px]">Máx</div>
-                                  <div className="font-bold" style={{ color: param.color }}>
+                                  <div className="font-bold" style={{ color: '#333333' }}>
                                     {param.max.toFixed(2)}{param.unit}
                                   </div>
                                 </div>

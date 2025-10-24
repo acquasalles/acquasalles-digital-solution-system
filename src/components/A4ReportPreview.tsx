@@ -1053,9 +1053,7 @@ export function A4ReportPreview({
                                 <h4 className="font-semibold text-xs px-4   text-white rounded-full" style={{ 'background-color': param.color }}>
                                   {param.label}
                                 </h4>
-                                <span className="text-xs text-gray-600">
-                                  Média: <strong>{param.avg.toFixed(2)}{param.unit}</strong>
-                                </span>
+                                
                               </div>
 
                               {/* Visual Bar Chart */}

@@ -1050,8 +1050,7 @@ export function A4ReportPreview({
                             <div key={param.label} className="mb-2">
                               {/* Parameter Header */}
                               <div className="flex items-center justify-between mb-1">
-                                <h4 className="font-semibold text-xs" 
-                                  style={{ color: '#ffffff' , background-color: `rgb(16, 185, 129)` }}>
+                                <h4 className="font-semibold text-xs" style={{ color: param.color }}>
                                   {param.label}
                                 </h4>
                                 <span className="text-xs text-gray-600">
@@ -1131,6 +1130,7 @@ export function A4ReportPreview({
                                   <div className="font-bold" style={{ color: '#333333' }}>
                                     {param.min.toFixed(2)}{param.unit}
                                   </div>
+                                  
                                 </div>
                                 <div className="bg-white p-1 rounded border border-gray-200">
                                   <div className="text-gray-600 text-[9px]">Média</div>
